@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: IAM + STS demo stack
+
+Resources:
+
+  AppUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: app-user
+
+  AppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: app-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt AppUser.Arn
+            Action: sts:AssumeRole
+
+  AppRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: app-role-policy
+      Roles:
+        - !Ref AppRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListAllMyBuckets
+              - s3:CreateBucket
+              - s3:ListBucket
+            Resource: "*"
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt AppRole.Arn

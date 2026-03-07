@@ -1,0 +1,238 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: localstack-init
+  labels:
+    app: localstack
+data:
+
+  # ------------------------------------------------------------
+  # INIT SCRIPT: Core infrastructure (runs first)
+  # ------------------------------------------------------------
+  deploy-core.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    echo "[INIT] Deploying core CloudFormation stack"
+
+    echo "[INIT] Files in /opt/infra:"
+    ls -l /opt/infra
+
+    awslocal cloudformation deploy \
+      --stack-name core-stack \
+      --template-file /opt/infra/core-stack.yaml
+
+    echo "[INIT] Core stack deployed"
+
+  # ------------------------------------------------------------
+  # INIT SCRIPT: IAM + STS (runs second)
+  # ------------------------------------------------------------
+  deploy-iam.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    echo "[INIT] Deploying IAM + STS stack"
+
+    awslocal cloudformation deploy \
+      --stack-name iam-stack \
+      --template-file /opt/infra/iam-stack.yaml
+
+    echo "[INIT] IAM stack deployed"
+
+  deploy-platform.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    awslocal cloudformation deploy \
+      --stack-name platform-stack \
+      --template-file /opt/infra/platform-account.yaml
+
+  deploy-app.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    awslocal cloudformation deploy \
+      --stack-name app-stack \
+      --template-file /opt/infra/app-account.yaml
+
+  deploy-irsa.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    echo "=== Deploying IRSA Stack ==="
+    awslocal cloudformation deploy \
+      --stack-name irsa-stack \
+      --template-file /opt/infra/irsa-stack.yaml \
+      --capabilities CAPABILITY_NAMED_IAM
+    echo "=== IRSA Stack deployed ==="
+
+
+  irsa-stack.yaml: |
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: IRSA simulation stack (LocalStack-compatible; no OIDCProvider Ref)
+
+    Resources:
+
+      IRSARole:
+        Type: AWS::IAM::Role
+        Properties:
+          RoleName: irsa-demo-role
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Federated: arn:aws:iam::000000000000:oidc-provider/example-oidc.local
+                Action: sts:AssumeRoleWithWebIdentity
+                Condition:
+                  StringEquals:
+                    example-oidc.local:sub: system:serviceaccount:default:irsa-sa
+
+      IRSAPolicy:
+        Type: AWS::IAM::Policy
+        Properties:
+          PolicyName: irsa-demo-policy
+          Roles:
+            - !Ref IRSARole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                Resource: "*"
+
+    Outputs:
+      IRSARoleArn:
+        Value: !GetAtt IRSARole.Arn
+
+
+
+
+  platform-account.yaml: |
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: Platform account (Account A)
+
+    Resources:
+
+      PlatformRole:
+        Type: AWS::IAM::Role
+        Properties:
+          RoleName: platform-role
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  AWS: arn:aws:iam::222222222222:root
+                Action: sts:AssumeRole
+
+      PlatformPolicy:
+        Type: AWS::IAM::Policy
+        Properties:
+          PolicyName: platform-policy
+          Roles:
+            - !Ref PlatformRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: "*"
+
+    Outputs:
+      PlatformRoleArn:
+        Value: !GetAtt PlatformRole.Arn
+
+
+  app-account.yaml: |
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: Application account (Account B)
+
+    Resources:
+
+      AppRole:
+        Type: AWS::IAM::Role
+        Properties:
+          RoleName: app-role
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  AWS: arn:aws:iam::222222222222:root
+                Action: sts:AssumeRole
+
+    Outputs:
+      AppRoleArn:
+        Value: !GetAtt AppRole.Arn
+
+
+
+  # ------------------------------------------------------------
+  # CLOUDFORMATION: CORE STACK (example baseline)
+  # ------------------------------------------------------------
+  core-stack.yaml: |
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: Core infrastructure stack for LocalStack
+
+    Resources:
+
+      CoreBucket:
+        Type: AWS::S3::Bucket
+        Properties:
+          BucketName: core-artifacts-bucket
+
+    Outputs:
+      CoreBucketName:
+        Description: Core S3 bucket
+        Value: !Ref CoreBucket
+
+  # ------------------------------------------------------------
+  # CLOUDFORMATION: IAM + STS STACK
+  # ------------------------------------------------------------
+  iam-stack.yaml: |
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: IAM + STS demo stack for LocalStack
+
+    Resources:
+
+      AppUser:
+        Type: AWS::IAM::User
+        Properties:
+          UserName: app-user
+
+      AppRole:
+        Type: AWS::IAM::Role
+        Properties:
+          RoleName: app-role
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Principal:
+                  AWS: !GetAtt AppUser.Arn
+                Action: sts:AssumeRole
+
+      AppRolePolicy:
+        Type: AWS::IAM::Policy
+        Properties:
+          PolicyName: app-role-policy
+          Roles:
+            - !Ref AppRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:CreateBucket
+                  - s3:ListBucket
+                Resource: "*"
+
+    Outputs:
+      AppUserArn:
+        Description: ARN of the IAM user
+        Value: !GetAtt AppUser.Arn
+
+      AppRoleArn:
+        Description: ARN of the IAM role
+        Value: !GetAtt AppRole.Arn

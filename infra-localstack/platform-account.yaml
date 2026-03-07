@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Platform account (Account A)
+
+Resources:
+
+  PlatformRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: platform-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::222222222222:root
+            Action: sts:AssumeRole
+
+  PlatformPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: platform-policy
+      Roles:
+        - !Ref PlatformRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource: "*"
+
+Outputs:
+  PlatformRoleArn:
+    Value: !GetAtt PlatformRole.Arn

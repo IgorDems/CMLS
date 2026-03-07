@@ -1,0 +1,20 @@
+version: "3.4"
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "8080:8080"
+      - "4566:4566"
+      - "4433:4433"
+    environment:
+      - SERVICES=s3,dynamodb,lambda,api_gateway,sns,sqs
+      - AWS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxx  # Replace with your key, if needed
+      - AWS_SECRET_ACCESS_KEY=yyyyyyyyyyyyyyyyy  # Replace with your secret key, if needed
+      - DEFAULT_REGION=us-east-1  # Change to your desired region
+      - DEBUG=1  # This enables debug mode
+    volumes:
+      - localstack_data:/var/lib/localstack
+
+volumes:
+  localstack_data:

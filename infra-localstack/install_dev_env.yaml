@@ -1,0 +1,82 @@
+# install_dev_env.yaml
+---
+- name: Install Prerequisites
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Install Docker Compose
+      apt:
+        name: docker-compose
+        state: present
+
+    - name: Install Python and pip
+      apt:
+        name: python3-pip
+        state: present
+
+    - name: Install kubectl
+      apt:
+        name: kubectl
+        state: present  # Assumes kubectl is needed.  May require downloading directly.
+
+- name: Install LocalStack
+  hosts: localhost
+  become: no
+  tasks:
+    - name: Install LocalStack using pip
+      pip:
+        name: localstack
+        executable: pip3
+
+- name: Install Terraform
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Download Terraform
+      get_url:
+        url: https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_amd64.zip  # Check for latest
+        dest: /tmp/terraform.zip
+        mode: '0644'
+
+    - name: Extract Terraform
+      unarchive:
+        src: /tmp/terraform.zip
+        dest: /usr/local/bin/
+        remote_src: yes
+        creates: /usr/local/bin/terraform
+
+- name: Install Ansible (optional)
+  hosts: localhost
+  become: yes
+  tasks:
+      - name: Install Ansible
+        apt:
+          name: ansible
+          state: present
+
+- name: Install Ollama
+  hosts: localhost
+  become: no
+  tasks:
+    - name: Download and Install Ollama
+      shell: |
+        curl -fsSL https://ollama.com/install.sh | sh
+
+- name: Kubernetes Checks (example - adapt to your needs)
+  hosts: localhost
+  become: no
+  tasks:
+    - name: Check Kubernetes Connection
+      shell: kubectl cluster-info
+      register: kubernetes_check
+      ignore_errors: yes # Check if connection is there
+    - debug:
+        msg: "Kubernetes Connection Status: {{ kubernetes_check.rc }}"
+        when: kubernetes_check.rc != 0
+
+# -- end of yaml --

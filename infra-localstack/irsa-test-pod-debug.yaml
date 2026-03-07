@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: irsa-test-debug
+  namespace: default
+spec:
+  serviceAccountName: irsa-sa
+  restartPolicy: Never
+  containers:
+    - name: awscli
+      image: amazon/aws-cli:2.13.38
+      command: ["/bin/sh", "-lc"]
+      args:
+        - |
+          set -euo pipefail
+
+          echo "== Token file =="
+          ls -l /var/run/secrets/eks.amazonaws.com/serviceaccount
+          echo "Token (first 20 chars): $(head -c 20 /var/run/secrets/eks.amazonaws.com/serviceaccount/token)"
+          echo
+
+          echo "== AssumeRoleWithWebIdentity =="
+          read AK SK ST <<< "$(aws --endpoint-url=${LOCALSTACK_ENDPOINT} \
+            sts assume-role-with-web-identity \
+            --role-arn ${AWS_ROLE_ARN} \
+            --role-session-name irsa-test \
+            --web-identity-token file:///var/run/secrets/eks.amazonaws.com/serviceaccount/token \
+            --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+            --output text)"
+
+          export AWS_ACCESS_KEY_ID="${AK}"
+          export AWS_SECRET_ACCESS_KEY="${SK}"
+          export AWS_SESSION_TOKEN="${ST}"
+
+          echo "== Caller identity =="
+          aws --endpoint-url=${LOCALSTACK_ENDPOINT} sts get-caller-identity
+          echo
+
+          echo "== S3 list (using assumed creds) =="
+          aws --endpoint-url=${LOCALSTACK_ENDPOINT} s3 ls
+          echo
+
+          echo "Keeping container alive for debug..."
+          sleep 600
+      env:
+        - name: AWS_ROLE_ARN
+          value: "arn:aws:iam::000000000000:role/irsa-demo-role"
+        - name: LOCALSTACK_ENDPOINT
+          value: "http://localstack:4566"
+        - name: AWS_DEFAULT_REGION
+          value: "us-east-1"
+      volumeMounts:
+        - name: web-identity-token
+          mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+          readOnly: true
+  volumes:
+    - name: web-identity-token
+      secret:
+        secretName: irsa-web-identity-token
+        items:
+          - key: token
+            path: token

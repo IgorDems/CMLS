@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: irsa-shell
+  namespace: default
+spec:
+  serviceAccountName: irsa-sa
+  restartPolicy: Never
+
+  containers:
+    - name: awscli
+      image: amazon/aws-cli:2.13.38
+      command: ["/bin/sh", "-lc"]
+      args:
+        - |
+          echo "IRSA shell pod started. Sleeping..."
+          sleep 36000
+      env:
+        - name: LOCALSTACK_ENDPOINT
+          value: "http://192.168.1.111:4566"
+        - name: AWS_DEFAULT_REGION
+          value: "us-east-1"
+      volumeMounts:
+        - name: web-identity-token
+          mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+          readOnly: true
+
+  volumes:
+    - name: web-identity-token
+      secret:
+        secretName: irsa-web-identity-token
+        items:
+          - key: token
+            path: token

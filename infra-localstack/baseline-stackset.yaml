@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Organization-wide baseline (StackSet)
+
+Resources:
+
+  BaselineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: org-baseline-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::111111111111:root
+            Action: sts:AssumeRole
+
+  BaselinePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: org-baseline-policy
+      Roles:
+        - !Ref BaselineRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListAllMyBuckets
+            Resource: "*"

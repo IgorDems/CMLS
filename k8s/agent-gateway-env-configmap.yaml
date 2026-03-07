@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-gateway-env
+  namespace: cloudmart
+data:
+  AWS_REGION: "us-east-1"
+  AWS_ACCESS_KEY_ID: "test"
+  AWS_SECRET_ACCESS_KEY: "test"
+  LOCALSTACK_ENDPOINT: "http://localstack.default.svc.cluster.local:4566"
+  PRODUCTS_TABLE: "cloudmart_products"
+  OLLAMA_BASE_URL: "http://ollama.cloudmart.svc.cluster.local:11434"
+  OLLAMA_MODEL: "gemma3:12b"

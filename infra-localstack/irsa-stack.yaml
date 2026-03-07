@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: IRSA simulation stack (LocalStack-compatible)
+
+Resources:
+
+  IRSARole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: irsa-demo-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: arn:aws:iam::000000000000:oidc-provider/example-oidc.local
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                example-oidc.local:sub: system:serviceaccount:default:irsa-sa
+
+  IRSAPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: irsa-demo-policy
+      Roles:
+        - !Ref IRSARole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListAllMyBuckets
+            Resource: "*"
+
+Outputs:
+  IRSARoleArn:
+    Value: !GetAtt IRSARole.Arn
+

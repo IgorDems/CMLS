@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: localstack-init
+  namespace: default
+data:
+  deploy-core.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    echo "Init started"
+    echo "Files in /opt/infra:"
+    ls -l /opt/infra
+
+    awslocal cloudformation deploy \
+      --stack-name core-stack \
+      --template-file /opt/infra/core-stack.yaml
+
+    echo "CloudFormation deployed"
+
+
+  core-stack.yaml: |
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: Core infrastructure for LocalStack
+
+    Resources:
+      ArtifactsBucket:
+        Type: AWS::S3::Bucket
+        Properties:
+          BucketName: localstack-artifacts
+
+      UsersTable:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          TableName: users
+          BillingMode: PAY_PER_REQUEST
+          AttributeDefinitions:
+            - AttributeName: userId
+              AttributeType: S
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH

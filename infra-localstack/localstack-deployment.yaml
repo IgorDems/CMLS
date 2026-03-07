@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+    spec:
+      containers:
+        - name: localstack
+          image: localstack/localstack:3.6
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4566
+          env:
+            - name: SERVICES
+              value: "cloudformation,s3,dynamodb,iam,sts,logs,cloudwatch"
+            - name: DEFAULT_REGION
+              value: "us-east-1"
+            - name: HOSTNAME_EXTERNAL
+              value: "192.168.1.111"
+            - name: DATA_DIR
+              value: "/var/lib/localstack"
+          volumeMounts:
+            - name: localstack-init
+              mountPath: /etc/localstack/init/ready.d/deploy-core.sh
+              subPath: deploy-core.sh
+
+            - name: localstack-init
+              mountPath: /etc/localstack/init/ready.d/deploy-iam.sh
+              subPath: deploy-iam.sh
+
+            - name: localstack-init
+              mountPath: /opt/infra/core-stack.yaml
+              subPath: core-stack.yaml
+
+            - name: localstack-init
+              mountPath: /opt/infra/iam-stack.yaml
+              subPath: iam-stack.yaml
+            
+            # IRSA init script
+            - name: localstack-init
+              mountPath: /etc/localstack/init/ready.d/deploy-irsa.sh
+              subPath: deploy-irsa.sh
+
+            # IRSA CloudFormation template
+            - name: localstack-init
+              mountPath: /opt/infra/irsa-stack.yaml
+              subPath: irsa-stack.yaml
+
+      volumes:
+        - name: localstack-init
+          configMap:
+            name: localstack-init
+            defaultMode: 0755

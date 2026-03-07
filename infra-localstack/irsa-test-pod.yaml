@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: irsa-test
+  namespace: default
+spec:
+  serviceAccountName: irsa-sa
+  restartPolicy: Never
+
+  containers:
+    - name: awscli
+      image: amazon/aws-cli:2.13.38
+      command: ["/bin/sh", "-lc"]
+      args:
+        - |
+          set -euo pipefail
+
+          echo "== Token file =="
+          ls -l /var/run/secrets/eks.amazonaws.com/serviceaccount || true
+          echo "Token (first 20 chars): $(head -c 20 /var/run/secrets/eks.amazonaws.com/serviceaccount/token || true)"
+          echo
+
+          echo "== AssumeRoleWithWebIdentity =="
+          read AK SK ST <<< "$(aws --endpoint-url=${LOCALSTACK_ENDPOINT} \
+            sts assume-role-with-web-identity \
+            --role-arn ${AWS_ROLE_ARN} \
+            --role-session-name irsa-test \
+            --web-identity-token file:///var/run/secrets/eks.amazonaws.com/serviceaccount/token \
+            --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+            --output text)"
+
+          echo "AccessKeyId: ${AK}"
+          echo
+
+          export AWS_ACCESS_KEY_ID="${AK}"
+          export AWS_SECRET_ACCESS_KEY="${SK}"
+          export AWS_SESSION_TOKEN="${ST}"
+
+          echo "== S3 list (using assumed creds) =="
+          aws --endpoint-url=${LOCALSTACK_ENDPOINT} s3 ls || true
+
+          echo "DONE"
+
+      env:
+        # Role we created via CloudFormation
+        - name: AWS_ROLE_ARN
+          value: "arn:aws:iam::000000000000:role/irsa-demo-role"
+
+        # Use the in-cluster LocalStack Service if available
+        # If you don't have a Service named 'localstack', change this to http://192.168.1.111:4566
+        - name: LOCALSTACK_ENDPOINT
+          value: "http://localstack:4566"
+
+        # region is optional for LocalStack but keeps SDK/CLI happy
+        - name: AWS_DEFAULT_REGION
+          value: "us-east-1"
+
+      volumeMounts:
+        - name: web-identity-token
+          mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+          readOnly: true
+
+  volumes:
+    - name: web-identity-token
+      secret:
+        secretName: irsa-web-identity-token
+        items:
+          - key: token
+            path: token

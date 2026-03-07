@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack
+spec:
+  selector:
+    app: localstack
+  ports:
+    - protocol: TCP
+      port: 4566 # Service port
+      targetPort: 4566  # Container port
+  type: LoadBalancer # Use LoadBalancer to expose externally.  NodePort is another option.

@@ -1,0 +1,19 @@
+grafana:
+  # ---- Health checks (твій існуючий блок) ----
+  livenessProbe:
+    initialDelaySeconds: 120
+  readinessProbe:
+    initialDelaySeconds: 60
+
+  # ---- Підхоплення Kubernetes Secret з GitHub OAuth ----
+  envFromSecret: grafana-github-oauth
+
+  # ---- Налаштування grafana.ini ----
+  grafana.ini:
+    server:
+      domain: grafana.local
+      root_url: http://grafana.local
+    auth.github:
+      enabled: true
+      allow_sign_up: true
+      scopes: user:email,read:org
