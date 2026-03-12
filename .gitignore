@@ -1,0 +1,113 @@
+# =============================
+# OS / system files
+# =============================
+
+.DS_Store
+Thumbs.db
+
+# =============================
+# Editors
+# =============================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =============================
+# Logs
+# =============================
+
+*.log
+logs/
+tmp/
+
+# =============================
+# Archives / downloads
+# =============================
+
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.gz
+
+# Local downloaded tools
+nerdctl.tar.gz
+
+# =============================
+# Python
+# =============================
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.env
+.env.*
+
+# =============================
+# Docker
+# =============================
+
+docker-cache/
+*.tar
+*.img
+
+# =============================
+# Kubernetes local artifacts
+# =============================
+
+*.kubeconfig
+kubeconfig
+kubeconfig.yaml
+
+# Kustomize temp
+kustomize-build.yaml
+
+# =============================
+# Terraform (future)
+# =============================
+
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+terraform.tfvars.json
+
+# =============================
+# LocalStack runtime data
+# =============================
+
+localstack-data/
+infra-localstack/.cache/
+infra-localstack/tmp/
+
+# =============================
+# Build artifacts
+# =============================
+
+dist/
+build/
+*.out
+
+# =============================
+# Secrets
+# =============================
+
+*.pem
+*.key
+*.crt
+*.secret
+*.token
+
+# =============================
+# Debug / temp scripts
+# =============================
+
+debug/
+*.bak
+*.backup
