@@ -1,18 +1,14 @@
 FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+LABEL org.opencontainers.image.source="https://github.com/IgorDems/CMLS"
 
 WORKDIR /app
 
-RUN addgroup --system app && adduser --system --ingroup app app
+COPY docker/agent-gateway/requirements.txt .
 
-COPY docker/agent-gateway/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY docker/agent-gateway/app.py /app/app.py
-
-USER app
+COPY docker/agent-gateway/app.py .
 
 EXPOSE 8080
 

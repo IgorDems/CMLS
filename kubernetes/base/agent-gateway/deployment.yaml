@@ -13,10 +13,12 @@ spec:
       labels:
         app: agent-gateway
     spec:
+      imagePullSecrets:
+      - name: ghcr-creds
       containers:
       - name: agent-gateway
-        image: agent-gateway:latest
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/igordems/agent-gateway:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
 

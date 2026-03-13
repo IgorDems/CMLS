@@ -9,3 +9,7 @@ output "orders_table" {
 output "tickets_table" {
   value = module.tickets_table.table_name
 }
+
+#output "agent_gateway_ecr_repository_url" {
+#  value = module.agent_gateway_ecr.repository_url
+#}

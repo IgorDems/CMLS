@@ -9,6 +9,7 @@ provider "aws" {
 
   endpoints {
     dynamodb = var.localstack_endpoint
+    ecr      = var.localstack_endpoint
   }
 }
 
@@ -32,3 +33,10 @@ module "tickets_table" {
   hash_key   = "pk"
   range_key  = "sk"
 }
+
+#module "agent_gateway_ecr" {
+#  source               = "../../modules/ecr-repository"
+#  name                 = "agent-gateway"
+#  image_tag_mutability = "MUTABLE"
+#  scan_on_push         = false
+#}
