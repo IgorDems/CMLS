@@ -1,0 +1,38 @@
+name: agent-gateway-deploy
+
+on:
+  workflow_run:
+    workflows: ["agent-gateway-ci"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Deploy to k3s
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ secrets.LAB_HOST }}
+        username: ${{ secrets.LAB_USER }}
+        key: ${{ secrets.LAB_SSH_KEY }}
+
+        script: |
+
+          set -e
+
+          IMAGE="ghcr.io/igordems/agent-gateway:${{ github.event.workflow_run.head_sha }}"
+
+          echo "Deploying image $IMAGE"
+
+          kubectl -n cloudmart set image deployment/agent-gateway \
+            agent-gateway=$IMAGE
+
+          kubectl -n cloudmart rollout status deployment/agent-gateway --timeout=180s
+
+          kubectl -n cloudmart get pods
