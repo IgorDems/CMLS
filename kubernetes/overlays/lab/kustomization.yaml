@@ -1,11 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../base/namespace
-  - ../../base/ollama
-  - ../../base/agent-gateway
-  - ../../base/monitoring
-  - ../../base/localstack
+- ../../base/namespace
+- ../../base/ollama
+- ../../base/agent-gateway
+- ../../base/monitoring
+- ../../base/localstack
 images:
-  - name: ghcr.io/igordems/agent-gateway
-    newTag: latest
+- name: ghcr.io/igordems/agent-gateway
+  newName: ghcr.io/igordems/agent-gateway
+  newTag: cbea6d23e126ba237460c8630492900617378860
