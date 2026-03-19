@@ -6,3 +6,6 @@ resources:
   - ../../base/agent-gateway
   - ../../base/monitoring
   - ../../base/localstack
+images:
+  - name: ghcr.io/igordems/agent-gateway
+    newTag: latest
