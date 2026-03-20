@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-products
+  namespace: cloudmart
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+
+      containers:
+      - name: seed
+        image: python:3.11
+
+        command: ["python", "/app/seed_products.py"]
+
+        env:
+        - name: AWS_REGION
+          value: us-east-1
+        - name: LOCALSTACK_ENDPOINT
+          value: http://localstack:4566
+        - name: PRODUCTS_TABLE
+          value: cloudmart_products
+
+        volumeMounts:
+        - name: script
+          mountPath: /app
+
+      volumes:
+      - name: script
+        configMap:
+          name: seed-products-script
