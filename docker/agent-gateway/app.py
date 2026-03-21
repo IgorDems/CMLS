@@ -38,6 +38,16 @@ REQ_LATENCY = Histogram(
     ["method", "path"],
 )
 
+dynamodb = boto3.resource(
+    "dynamodb",
+    region_name=os.getenv("AWS_REGION", "us-east-1"),
+    endpoint_url=os.getenv("LOCALSTACK_ENDPOINT"),
+    aws_access_key_id="test",
+    aws_secret_access_key="test",
+)
+
+table = dynamodb.Table(os.getenv("PRODUCTS_TABLE", "cloudmart_products"))
+
 ddb = boto3.client(
     "dynamodb",
     region_name=AWS_REGION,
