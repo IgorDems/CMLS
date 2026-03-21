@@ -100,6 +100,23 @@ def healthz():
         "ollama_ok": ollama_ok,
     }
 
+
+@app.get("/products")
+def get_products():
+    response = table.scan()
+
+    items = response.get("Items", [])
+
+    return [
+        {
+            "id": i["pk"].replace("PRODUCT#", ""),
+            "name": i["name"],
+            "price": float(i["price"]),
+        }
+        for i in items
+    ]
+
+
 @app.get("/metrics")
 def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
