@@ -16,6 +16,11 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+import uuid
+from datetime import datetime
+
+
+
 
 APP_NAME = "agent-gateway"
 
@@ -47,6 +52,9 @@ dynamodb = boto3.resource(
 )
 
 table = dynamodb.Table(os.getenv("PRODUCTS_TABLE", "cloudmart_products"))
+# Orders table (DynamoDB)
+ORDERS_TABLE = os.getenv("ORDERS_TABLE", "cloudmart_orders")
+orders_table = dynamodb.Table(ORDERS_TABLE)
 
 ddb = boto3.client(
     "dynamodb",
@@ -55,6 +63,21 @@ ddb = boto3.client(
     aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
     aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test"),
     config=Config(retries={"max_attempts": 2, "mode": "standard"}),
+)
+
+# --- SQS (event bus for async processing) ---
+sqs = boto3.client(
+    "sqs",
+    region_name=AWS_REGION,
+    endpoint_url=LOCALSTACK_ENDPOINT,
+    aws_access_key_id="test",
+    aws_secret_access_key="test",
+)
+
+# Queue URL for order events
+ORDERS_QUEUE_URL = os.getenv(
+    "ORDERS_QUEUE_URL",
+    "http://localstack:4566/000000000000/cloudmart-orders"
 )
 
 app = FastAPI(title=APP_NAME)
@@ -125,6 +148,111 @@ def get_products():
         }
         for i in items
     ]
+
+
+
+@app.post("/orders")
+def create_order(product_id: str):
+    """
+    Create new order:
+
+    FLOW:
+    1. Read product from DynamoDB
+    2. Persist order in orders table
+    3. Publish ORDER_CREATED event to SQS
+
+    WHY:
+    - decouples API from processing
+    - enables async workflows (payments, shipping)
+    """
+
+    # --- 1. Find product ---
+    products = table.scan().get("Items", [])
+
+    product = next(
+        (p for p in products if p["pk"] == f"PRODUCT#{product_id}"),
+        None
+    )
+
+    if not product:
+        return {"error": "Product not found"}
+
+    # --- 2. Create order ---
+    order_id = str(uuid.uuid4())
+
+    item = {
+        "pk": f"ORDER#{order_id}",
+        "sk": "META",
+        "product_id": product_id,
+        "product_name": product["name"],
+        "price": float(product["price"]),
+        "status": "CREATED",
+        "created_at": datetime.utcnow().isoformat()
+    }
+
+    orders_table.put_item(Item=item)
+
+    # --- 3. Publish event to SQS (CRITICAL PART) ---
+    event_payload = {
+        "order_id": order_id,
+        "event": "ORDER_CREATED",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    try:
+        sqs.send_message(
+            QueueUrl=ORDERS_QUEUE_URL,
+            MessageBody=json.dumps(event_payload)
+        )
+        print(f"[SQS] Event sent: {event_payload}")
+
+    except Exception as e:
+        # DO NOT fail order creation if SQS fails
+        print("[SQS ERROR]", str(e))
+
+    return {
+        "order_id": order_id,
+        "status": "CREATED"
+    }
+
+
+
+@app.get("/orders")
+def list_orders():
+    response = orders_table.scan()
+    return response.get("Items", [])
+
+@app.post("/orders/{order_id}/pay")
+def pay_order(order_id: str):
+
+    pk = f"ORDER#{order_id}"
+
+    orders_table.update_item(
+        Key={"pk": pk, "sk": "META"},
+        UpdateExpression="SET #s = :s",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":s": "PAID"},
+    )
+
+    return {"order_id": order_id, "status": "PAID"}
+
+@app.post("/orders/{order_id}/ship")
+def ship_order(order_id: str):
+
+    pk = f"ORDER#{order_id}"
+
+    orders_table.update_item(
+        Key={"pk": pk, "sk": "META"},
+        UpdateExpression="SET #s = :s",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":s": "SHIPPED"},
+    )
+
+    return {"order_id": order_id, "status": "SHIPPED"}
+
+
+
+
 
 
 @app.get("/metrics")
