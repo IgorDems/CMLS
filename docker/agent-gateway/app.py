@@ -16,21 +16,25 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+
 import uuid
 from datetime import datetime
-
-
+import traceback
 
 
 APP_NAME = "agent-gateway"
 
+# --- ENV CONFIG ---
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 LOCALSTACK_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT")
+
 PRODUCTS_TABLE = os.getenv("PRODUCTS_TABLE", "cloudmart_products")
+ORDERS_TABLE = os.getenv("ORDERS_TABLE", "cloudmart_orders")
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "").rstrip("/")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:12b")
 
+# --- METRICS ---
 REQ_COUNT = Counter(
     "http_requests_total",
     "Total HTTP requests",
@@ -43,29 +47,28 @@ REQ_LATENCY = Histogram(
     ["method", "path"],
 )
 
+# --- DYNAMODB ---
 dynamodb = boto3.resource(
     "dynamodb",
-    region_name=os.getenv("AWS_REGION", "us-east-1"),
-    endpoint_url=os.getenv("LOCALSTACK_ENDPOINT"),
+    region_name=AWS_REGION,
+    endpoint_url=LOCALSTACK_ENDPOINT,
     aws_access_key_id="test",
     aws_secret_access_key="test",
 )
 
-table = dynamodb.Table(os.getenv("PRODUCTS_TABLE", "cloudmart_products"))
-# Orders table (DynamoDB)
-ORDERS_TABLE = os.getenv("ORDERS_TABLE", "cloudmart_orders")
+products_table = dynamodb.Table(PRODUCTS_TABLE)
 orders_table = dynamodb.Table(ORDERS_TABLE)
 
 ddb = boto3.client(
     "dynamodb",
     region_name=AWS_REGION,
     endpoint_url=LOCALSTACK_ENDPOINT,
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test"),
+    aws_access_key_id="test",
+    aws_secret_access_key="test",
     config=Config(retries={"max_attempts": 2, "mode": "standard"}),
 )
 
-# --- SQS (event bus for async processing) ---
+# --- SQS ---
 sqs = boto3.client(
     "sqs",
     region_name=AWS_REGION,
@@ -74,21 +77,29 @@ sqs = boto3.client(
     aws_secret_access_key="test",
 )
 
-# Queue URL for order events
-ORDERS_QUEUE_URL = os.getenv(
-    "ORDERS_QUEUE_URL",
-    "http://localstack:4566/000000000000/cloudmart-orders"
-)
 
+def get_queue_url():
+    """
+    AWS-style dynamic queue resolution (CRITICAL FIX)
+    """
+    response = sqs.get_queue_url(QueueName="cloudmart-orders")
+    return response["QueueUrl"]
+
+
+# --- FASTAPI ---
 app = FastAPI(title=APP_NAME)
 
+
+# --- MODELS ---
 class ChatIn(BaseModel):
     message: str
     session_id: Optional[str] = None
 
+
 class OAChatMessage(BaseModel):
     role: str
     content: str
+
 
 class OAChatIn(BaseModel):
     model: Optional[str] = None
@@ -96,6 +107,8 @@ class OAChatIn(BaseModel):
     temperature: Optional[float] = 0.2
     stream: Optional[bool] = False
 
+
+# --- MIDDLEWARE ---
 @app.middleware("http")
 async def prom_middleware(request: Request, call_next):
     start = time.time()
@@ -110,6 +123,8 @@ async def prom_middleware(request: Request, call_next):
         REQ_LATENCY.labels(request.method, path).observe(elapsed)
         REQ_COUNT.labels(request.method, path, str(status_code)).inc()
 
+
+# --- HEALTH ---
 @app.get("/healthz")
 def healthz():
     try:
@@ -134,10 +149,10 @@ def healthz():
     }
 
 
+# --- PRODUCTS ---
 @app.get("/products")
 def get_products():
-    response = table.scan()
-
+    response = products_table.scan()
     items = response.get("Items", [])
 
     return [
@@ -150,24 +165,18 @@ def get_products():
     ]
 
 
-
+# --- ORDERS ---
 @app.post("/orders")
 def create_order(product_id: str):
     """
-    Create new order:
-
-    FLOW:
-    1. Read product from DynamoDB
-    2. Persist order in orders table
-    3. Publish ORDER_CREATED event to SQS
-
-    WHY:
-    - decouples API from processing
-    - enables async workflows (payments, shipping)
+    Order flow:
+    1. Read product
+    2. Save order
+    3. Emit event to SQS
     """
 
-    # --- 1. Find product ---
-    products = table.scan().get("Items", [])
+    # --- find product ---
+    products = products_table.scan().get("Items", [])
 
     product = next(
         (p for p in products if p["pk"] == f"PRODUCT#{product_id}"),
@@ -177,7 +186,7 @@ def create_order(product_id: str):
     if not product:
         return {"error": "Product not found"}
 
-    # --- 2. Create order ---
+    # --- create order ---
     order_id = str(uuid.uuid4())
 
     item = {
@@ -192,7 +201,7 @@ def create_order(product_id: str):
 
     orders_table.put_item(Item=item)
 
-    # --- 3. Publish event to SQS (CRITICAL PART) ---
+    # --- send event to SQS ---
     event_payload = {
         "order_id": order_id,
         "event": "ORDER_CREATED",
@@ -200,15 +209,18 @@ def create_order(product_id: str):
     }
 
     try:
+        queue_url = get_queue_url()
+
         sqs.send_message(
-            QueueUrl=ORDERS_QUEUE_URL,
+            QueueUrl=queue_url,
             MessageBody=json.dumps(event_payload)
         )
+
         print(f"[SQS] Event sent: {event_payload}")
 
     except Exception as e:
-        # DO NOT fail order creation if SQS fails
-        print("[SQS ERROR]", str(e))
+        traceback.print_exc()
+        raise Exception(f"SQS send failed: {str(e)}")
 
     return {
         "order_id": order_id,
@@ -216,19 +228,16 @@ def create_order(product_id: str):
     }
 
 
-
 @app.get("/orders")
 def list_orders():
     response = orders_table.scan()
     return response.get("Items", [])
 
+
 @app.post("/orders/{order_id}/pay")
 def pay_order(order_id: str):
-
-    pk = f"ORDER#{order_id}"
-
     orders_table.update_item(
-        Key={"pk": pk, "sk": "META"},
+        Key={"pk": f"ORDER#{order_id}", "sk": "META"},
         UpdateExpression="SET #s = :s",
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": "PAID"},
@@ -236,13 +245,11 @@ def pay_order(order_id: str):
 
     return {"order_id": order_id, "status": "PAID"}
 
+
 @app.post("/orders/{order_id}/ship")
 def ship_order(order_id: str):
-
-    pk = f"ORDER#{order_id}"
-
     orders_table.update_item(
-        Key={"pk": pk, "sk": "META"},
+        Key={"pk": f"ORDER#{order_id}", "sk": "META"},
         UpdateExpression="SET #s = :s",
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": "SHIPPED"},
@@ -251,44 +258,38 @@ def ship_order(order_id: str):
     return {"order_id": order_id, "status": "SHIPPED"}
 
 
-
-
-
-
+# --- METRICS ---
 @app.get("/metrics")
 def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
+
+# --- CHAT ---
 def list_products(limit: int = 50) -> List[Dict[str, Any]]:
     resp = ddb.scan(TableName=PRODUCTS_TABLE, Limit=limit)
     items = resp.get("Items", [])
-    out: List[Dict[str, Any]] = []
-    for it in items:
-        out.append({
+    return [
+        {
             "pk": it["pk"]["S"],
-            "sk": it["sk"]["S"],
             "name": it.get("name", {}).get("S"),
             "price": float(it.get("price", {}).get("N", "0")),
-        })
-    return out
+        }
+        for it in items
+    ]
+
 
 def is_list_products_intent(text: str) -> bool:
     t = text.lower()
-    return (
-        "list products" in t
-        or "products" in t
-        or "товар" in t
-        or "каталог" in t
-    )
+    return "products" in t or "товар" in t
 
-def ollama_chat(user_text: str, model: str, temperature: float = 0.2) -> str:
+
+def ollama_chat(user_text: str, model: str) -> str:
     url = f"{OLLAMA_BASE_URL}/api/chat"
 
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": user_text}],
         "stream": False,
-        "options": {"temperature": temperature},
     }
 
     data = json.dumps(payload).encode("utf-8")
@@ -305,68 +306,20 @@ def ollama_chat(user_text: str, model: str, temperature: float = 0.2) -> str:
             body = r.read()
 
         j = json.loads(body.decode("utf-8"))
-
         return j.get("message", {}).get("content", "")
 
     except Exception as e:
         return f"Ollama error: {str(e)}"
 
+
 @app.post("/chat")
 def chat(payload: ChatIn):
-
     text = payload.message.strip()
 
     if is_list_products_intent(text):
-
-        products = list_products()
-
         return {
             "reply": "Ось список продуктів:",
-            "products": products
+            "products": list_products()
         }
 
-    reply = ollama_chat(text, model=OLLAMA_MODEL)
-
-    return {"reply": reply}
-
-@app.post("/v1/chat/completions")
-def v1_chat_completions(payload: OAChatIn):
-
-    model = payload.model or OLLAMA_MODEL
-
-    user_text = ""
-
-    for m in reversed(payload.messages):
-        if m.role == "user":
-            user_text = m.content
-            break
-
-    if is_list_products_intent(user_text):
-
-        products = list_products()
-
-        content = "Ось список продуктів:\n"
-
-        for p in products:
-            content += f"- {p.get('name')} (${p.get('price')})\n"
-
-    else:
-
-        content = ollama_chat(user_text, model)
-
-    now = int(time.time())
-
-    return {
-        "id": f"chatcmpl-{now}",
-        "object": "chat.completion",
-        "created": now,
-        "model": model,
-        "choices": [
-            {
-                "index": 0,
-                "message": {"role": "assistant", "content": content},
-                "finish_reason": "stop",
-            }
-        ],
-        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-    }
+    return {"reply": ollama_chat(text, OLLAMA_MODEL)}
