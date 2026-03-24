@@ -7,7 +7,14 @@ data:
   AWS_REGION: "us-east-1"
   AWS_ACCESS_KEY_ID: "test"
   AWS_SECRET_ACCESS_KEY: "test"
+  
   LOCALSTACK_ENDPOINT: "http://localstack.default.svc.cluster.local:4566"
+
+  # SQS
+  ORDERS_QUEUE_URL: "http://localstack.default.svc.cluster.local:4566/000000000000/cloudmart-orders"
+
   PRODUCTS_TABLE: "cloudmart_products"
+  ORDERS_TABLE: "cloudmart_orders"
+
   OLLAMA_BASE_URL: "http://ollama.cloudmart.svc.cluster.local:11434"
   OLLAMA_MODEL: "gemma3:12b"
