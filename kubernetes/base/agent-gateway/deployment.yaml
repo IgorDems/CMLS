@@ -34,6 +34,11 @@ spec:
         - configMapRef:
             name: agent-gateway-env
 
+        env:
+        - name: ORDERS_QUEUE_URL
+          value: "http://localstack.default.svc.cluster.local:4566/000000000000/cloudmart-orders"
+
+
         resources:
           requests:
             cpu: "100m"
