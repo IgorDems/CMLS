@@ -9,4 +9,4 @@ resources:
 images:
 - name: ghcr.io/igordems/agent-gateway
   newName: ghcr.io/igordems/agent-gateway
-  newTag: 62334e4e5901136559f7aa73b27f52f7fc727b18
+  newTag: a03144e480ce43ac72ceacea6598dbd53543f8eb
