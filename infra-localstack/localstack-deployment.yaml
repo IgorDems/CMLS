@@ -8,27 +8,43 @@ spec:
   selector:
     matchLabels:
       app: localstack
+
   template:
     metadata:
       labels:
         app: localstack
+
     spec:
       containers:
         - name: localstack
           image: localstack/localstack:3.6
           imagePullPolicy: IfNotPresent
+
           ports:
             - containerPort: 4566
+
           env:
+            # 🔥 CRITICAL: додали SQS
             - name: SERVICES
-              value: "cloudformation,s3,dynamodb,iam,sts,logs,cloudwatch"
+              value: "cloudformation,s3,dynamodb,sqs,iam,sts,logs,cloudwatch"
+
             - name: DEFAULT_REGION
               value: "us-east-1"
+
+            # 👉 важливо для доступу ззовні
             - name: HOSTNAME_EXTERNAL
-              value: "192.168.1.111"
+              value: "192.168.1.112"
+
+            # 👉 щоб state не губився між рестартами
             - name: DATA_DIR
               value: "/var/lib/localstack"
+
+            # 🔥 (optional але дуже рекомендовано)
+            - name: LS_LOG
+              value: "info"
+
           volumeMounts:
+            # --- INIT scripts ---
             - name: localstack-init
               mountPath: /etc/localstack/init/ready.d/deploy-core.sh
               subPath: deploy-core.sh
@@ -38,19 +54,18 @@ spec:
               subPath: deploy-iam.sh
 
             - name: localstack-init
+              mountPath: /etc/localstack/init/ready.d/deploy-irsa.sh
+              subPath: deploy-irsa.sh
+
+            # --- CloudFormation templates ---
+            - name: localstack-init
               mountPath: /opt/infra/core-stack.yaml
               subPath: core-stack.yaml
 
             - name: localstack-init
               mountPath: /opt/infra/iam-stack.yaml
               subPath: iam-stack.yaml
-            
-            # IRSA init script
-            - name: localstack-init
-              mountPath: /etc/localstack/init/ready.d/deploy-irsa.sh
-              subPath: deploy-irsa.sh
 
-            # IRSA CloudFormation template
             - name: localstack-init
               mountPath: /opt/infra/irsa-stack.yaml
               subPath: irsa-stack.yaml
