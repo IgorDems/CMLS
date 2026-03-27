@@ -1,3 +1,5 @@
+# 1. Правильні імпорти на початку
+from boto3.dynamodb.conditions import Key, Attr
 import os
 import time
 import json
@@ -77,14 +79,27 @@ sqs = boto3.client(
     aws_secret_access_key="test",
 )
 
-
 def get_queue_url():
     """
-    AWS-style dynamic queue resolution (CRITICAL FIX)
+    Динамічне отримання URL черги з обробкою помилок.
     """
-    response = sqs.get_queue_url(QueueName="cloudmart-orders")
-    return response["QueueUrl"]
+    try:
+        response = sqs.get_queue_url(QueueName="cloudmart-orders")
+        url = response["QueueUrl"]
 
+        if LOCALSTACK_ENDPOINT:
+            from urllib.parse import urlparse
+
+            endpoint = urlparse(LOCALSTACK_ENDPOINT)
+            path = urlparse(url).path
+
+            url = f"{endpoint.scheme}://{endpoint.hostname}:{endpoint.port}{path}"
+
+        print(f"[SQS] Використовуємо Queue URL: {url}")
+        return url
+    except Exception as e:
+        print(f"[SQS] Помилка отримання URL черги: {e}")
+        raise
 
 # --- FASTAPI ---
 app = FastAPI(title=APP_NAME)
@@ -148,44 +163,45 @@ def healthz():
         "ollama_ok": ollama_ok,
     }
 
-
 # --- PRODUCTS ---
+
+# 2. Оновлений метод отримання продуктів через GSI Query
 @app.get("/products")
 def get_products():
-    response = products_table.scan()
-    items = response.get("Items", [])
+    try:
+        response = products_table.query(
+            IndexName="sk-index",
+            KeyConditionExpression=Key("sk").eq("META")
+        )
+        items = response.get("Items", [])
+        return [
+            {
+                "id": i["pk"].replace("PRODUCT#", ""),
+                "name": i["name"],
+                "price": float(i["price"]),
+            } for i in items
+        ]
+    except Exception as e:
+        print(f"Error fetching products: {e}")
+        return []
 
-    return [
-        {
-            "id": i["pk"].replace("PRODUCT#", ""),
-            "name": i["name"],
-            "price": float(i["price"]),
-        }
-        for i in items
-    ]
-
-
-# --- ORDERS ---
+# 3. Оновлений метод створення замовлення через точний get_item
 @app.post("/orders")
 def create_order(product_id: str):
-    """
-    Order flow:
-    1. Read product
-    2. Save order
-    3. Emit event to SQS
-    """
-
-    # --- find product ---
-    products = products_table.scan().get("Items", [])
-
-    product = next(
-        (p for p in products if p["pk"] == f"PRODUCT#{product_id}"),
-        None
+    # Використовуємо get_item з точним ключем - це найшвидша операція в DynamoDB
+    resp = products_table.get_item(
+        Key={
+            "pk": f"PRODUCT#{product_id}",
+            "sk": "META"
+        },
+        ConsistentRead=True # Тут строгість не завадить
     )
+    product = resp.get("Item")
 
     if not product:
         return {"error": "Product not found"}
 
+   
     # --- create order ---
     order_id = str(uuid.uuid4())
 
@@ -263,10 +279,16 @@ def ship_order(order_id: str):
 def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-
-# --- CHAT ---
+# --- CHAT INTERNAL ---
 def list_products(limit: int = 50) -> List[Dict[str, Any]]:
-    resp = ddb.scan(TableName=PRODUCTS_TABLE, Limit=limit)
+    # Використовуємо query через GSI (sk-index)
+    resp = ddb.query(
+        TableName=PRODUCTS_TABLE,
+        IndexName="sk-index", # ОБОВ'ЯЗКОВО
+        Limit=limit,
+        KeyConditionExpression="sk = :sk_val", # Змінено з Filter на KeyCondition
+        ExpressionAttributeValues={":sk_val": {"S": "META"}}
+    )
     items = resp.get("Items", [])
     return [
         {
