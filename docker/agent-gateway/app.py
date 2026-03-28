@@ -227,10 +227,16 @@ def create_order(product_id: str = Query(...)):
             "timestamp": datetime.utcnow().isoformat()
         }
 
-        queue_url = get_queue_url()
+#        queue_url = get_queue_url()
 
-        sqs.send_message(
-            QueueUrl=queue_url,
+         QUEUE_URL = os.getenv(
+             "ORDERS_QUEUE_URL",
+             "http://localstack.default.svc.cluster.local:4566/000000000000/cloudmart-orders"
+        ) 
+
+
+       sqs.send_message(
+            QueueUrl=QUEUE_URL,
             MessageBody=json.dumps(event_payload)
         )
 
