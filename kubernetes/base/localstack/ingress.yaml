@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: localstack
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    cert-manager.io/cluster-issuer: selfsigned-issuer
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localstack.192.168.1.240.sslip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: localstack
+            port:
+              number: 4566
+
+  tls:
+  - hosts:
+    - localstack.192.168.1.240.sslip.io
+    secretName: localstack-tls

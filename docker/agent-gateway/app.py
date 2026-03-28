@@ -1,3 +1,4 @@
+igor@aorus:~/CMLS$ cat docker/agent-gateway/app.py
 # 1. Правильні імпорти на початку
 from boto3.dynamodb.conditions import Key, Attr
 import os
@@ -6,7 +7,7 @@ import json
 import urllib.request
 import urllib.error
 from typing import Any, Dict, List, Optional
-
+from fastapi import Query
 import boto3
 from botocore.config import Config
 from fastapi import FastAPI, Request, Response
@@ -186,45 +187,46 @@ def get_products():
         return []
 
 # 3. Оновлений метод створення замовлення через точний get_item
+
 @app.post("/orders")
-def create_order(product_id: str):
-    # Використовуємо get_item з точним ключем - це найшвидша операція в DynamoDB
-    resp = products_table.get_item(
-        Key={
-            "pk": f"PRODUCT#{product_id}",
-            "sk": "META"
-        },
-        ConsistentRead=True # Тут строгість не завадить
-    )
-    product = resp.get("Item")
-
-    if not product:
-        return {"error": "Product not found"}
-
-   
-    # --- create order ---
-    order_id = str(uuid.uuid4())
-
-    item = {
-        "pk": f"ORDER#{order_id}",
-        "sk": "META",
-        "product_id": product_id,
-        "product_name": product["name"],
-        "price": float(product["price"]),
-        "status": "CREATED",
-        "created_at": datetime.utcnow().isoformat()
-    }
-
-    orders_table.put_item(Item=item)
-
-    # --- send event to SQS ---
-    event_payload = {
-        "order_id": order_id,
-        "event": "ORDER_CREATED",
-        "timestamp": datetime.utcnow().isoformat()
-    }
-
+def create_order(product_id: str = Query(...)):
     try:
+        # --- 1. Find product ---
+        resp = products_table.get_item(
+            Key={
+                "pk": f"PRODUCT#{product_id}",
+                "sk": "META"
+            },
+            ConsistentRead=True
+        )
+
+        product = resp.get("Item")
+
+        if not product:
+            return {"error": "Product not found"}
+
+        # --- 2. Create order ---
+        order_id = str(uuid.uuid4())
+
+        item = {
+            "pk": f"ORDER#{order_id}",
+            "sk": "META",
+            "product_id": product_id,
+            "product_name": product["name"],
+            "price": float(product["price"]),
+            "status": "CREATED",
+            "created_at": datetime.utcnow().isoformat()
+        }
+
+        orders_table.put_item(Item=item)
+
+        # --- 3. Send event to SQS ---
+        event_payload = {
+            "order_id": order_id,
+            "event": "ORDER_CREATED",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
         queue_url = get_queue_url()
 
         sqs.send_message(
@@ -234,14 +236,18 @@ def create_order(product_id: str):
 
         print(f"[SQS] Event sent: {event_payload}")
 
+        return {
+            "order_id": order_id,
+            "status": "CREATED"
+        }
+
     except Exception as e:
         traceback.print_exc()
-        raise Exception(f"SQS send failed: {str(e)}")
 
-    return {
-        "order_id": order_id,
-        "status": "CREATED"
-    }
+        return {
+            "error": str(e),
+            "type": "order_creation_failed"
+        }
 
 
 @app.get("/orders")
