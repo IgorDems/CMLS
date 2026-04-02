@@ -6,7 +6,7 @@ metadata:
 spec:
   replicas: 1
   revisionHistoryLimit: 5
-  progressDeadlineSeconds: 300  
+  progressDeadlineSeconds: 300
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -31,8 +31,11 @@ spec:
         - containerPort: 8080
 
         envFrom:
-        - configMapRef:
-            name: agent-gateway-env
+          - configMapRef:
+              name: agent-gateway-env
+        env:
+          - name: SQS_QUEUE_URL
+            value: "http://localstack.default.svc.cluster.local:4566/000000000000/cloudmart-orders"
 
         resources:
           requests:
