@@ -1,15 +1,16 @@
+igor@aorus:~/CMLS$ cat docker/agent-gateway/app.py
+# 1. Правильні імпорти на початку
+from boto3.dynamodb.conditions import Key, Attr
 import os
 import time
 import json
-import uuid
-import logging
 import urllib.request
-from datetime import datetime
+import urllib.error
 from typing import Any, Dict, List, Optional
-
+from fastapi import Query
 import boto3
 from botocore.config import Config
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, Request, Response
 from pydantic import BaseModel
 
 from prometheus_client import (
@@ -19,28 +20,24 @@ from prometheus_client import (
     generate_latest,
 )
 
-from boto3.dynamodb.conditions import Key
+import uuid
+from datetime import datetime
+import traceback
 
 
-# -------------------- LOGGING --------------------
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# -------------------- CONFIG --------------------
 APP_NAME = "agent-gateway"
 
+# --- ENV CONFIG ---
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 LOCALSTACK_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT")
 
 PRODUCTS_TABLE = os.getenv("PRODUCTS_TABLE", "cloudmart_products")
 ORDERS_TABLE = os.getenv("ORDERS_TABLE", "cloudmart_orders")
 
-SQS_QUEUE_URL = os.getenv("SQS_QUEUE_URL")
-
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "").rstrip("/")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:12b")
 
-# -------------------- METRICS --------------------
+# --- METRICS ---
 REQ_COUNT = Counter(
     "http_requests_total",
     "Total HTTP requests",
@@ -49,11 +46,11 @@ REQ_COUNT = Counter(
 
 REQ_LATENCY = Histogram(
     "http_request_duration_seconds",
-    "HTTP request latency",
+    "HTTP request latency in seconds",
     ["method", "path"],
 )
 
-# -------------------- AWS CLIENTS --------------------
+# --- DYNAMODB ---
 dynamodb = boto3.resource(
     "dynamodb",
     region_name=AWS_REGION,
@@ -71,9 +68,10 @@ ddb = boto3.client(
     endpoint_url=LOCALSTACK_ENDPOINT,
     aws_access_key_id="test",
     aws_secret_access_key="test",
-    config=Config(retries={"max_attempts": 3, "mode": "standard"}),
+    config=Config(retries={"max_attempts": 2, "mode": "standard"}),
 )
 
+# --- SQS ---
 sqs = boto3.client(
     "sqs",
     region_name=AWS_REGION,
@@ -82,8 +80,10 @@ sqs = boto3.client(
     aws_secret_access_key="test",
 )
 
-# -------------------- SQS HELPERS --------------------
-def get_queue_url() -> str:
+def get_queue_url():
+    """
+    Динамічне отримання URL черги з обробкою помилок.
+    """
     try:
         response = sqs.get_queue_url(QueueName="cloudmart-orders")
         url = response["QueueUrl"]
@@ -93,54 +93,46 @@ def get_queue_url() -> str:
 
             endpoint = urlparse(LOCALSTACK_ENDPOINT)
             path = urlparse(url).path
+
             url = f"{endpoint.scheme}://{endpoint.hostname}:{endpoint.port}{path}"
 
-        logger.info(f"[SQS] Using Queue URL: {url}")
+        print(f"[SQS] Використовуємо Queue URL: {url}")
         return url
-
     except Exception as e:
-        logger.error(f"[SQS] Failed to get queue URL: {e}")
+        print(f"[SQS] Помилка отримання URL черги: {e}")
         raise
 
-
-def send_sqs_message(payload: dict):
-    queue_url = SQS_QUEUE_URL or get_queue_url()
-
-    for attempt in range(3):
-        try:
-            sqs.send_message(
-                QueueUrl=queue_url,
-                MessageBody=json.dumps(payload),
-            )
-            logger.info("SQS message sent")
-            return
-        except Exception as e:
-            logger.warning(f"SQS retry {attempt}: {e}")
-            time.sleep(2 ** attempt)
-
-    raise Exception("Failed to send SQS message after retries")
-
-
-# -------------------- FASTAPI --------------------
+# --- FASTAPI ---
 app = FastAPI(title=APP_NAME)
 
 
-# -------------------- MODELS --------------------
+# --- MODELS ---
 class ChatIn(BaseModel):
     message: str
     session_id: Optional[str] = None
 
 
-# -------------------- MIDDLEWARE --------------------
+class OAChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class OAChatIn(BaseModel):
+    model: Optional[str] = None
+    messages: List[OAChatMessage]
+    temperature: Optional[float] = 0.2
+    stream: Optional[bool] = False
+
+
+# --- MIDDLEWARE ---
 @app.middleware("http")
 async def prom_middleware(request: Request, call_next):
     start = time.time()
     status_code = 500
-
     try:
-        response: Response = await call_next(request)
-        status_code = response.status_code
-        return response
+        resp: Response = await call_next(request)
+        status_code = resp.status_code
+        return resp
     finally:
         elapsed = time.time() - start
         path = request.url.path
@@ -148,62 +140,56 @@ async def prom_middleware(request: Request, call_next):
         REQ_COUNT.labels(request.method, path, str(status_code)).inc()
 
 
-# -------------------- HEALTH --------------------
+# --- HEALTH ---
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "service": APP_NAME}
-
-
-@app.get("/readyz")
-def readyz():
     try:
         ddb.list_tables(Limit=1)
         ddb_ok = True
     except Exception:
         ddb_ok = False
 
-    sqs_ok = True
-    try:
-        _ = SQS_QUEUE_URL or get_queue_url()
-    except Exception:
-        sqs_ok = False
+    ollama_ok = False
+    if OLLAMA_BASE_URL:
+        try:
+            with urllib.request.urlopen(f"{OLLAMA_BASE_URL}/api/tags", timeout=3) as r:
+                _ = r.read(200)
+            ollama_ok = True
+        except Exception:
+            ollama_ok = False
 
     return {
-        "dynamodb": ddb_ok,
-        "sqs": sqs_ok,
+        "service": APP_NAME,
+        "dynamodb_ok": ddb_ok,
+        "ollama_ok": ollama_ok,
     }
 
+# --- PRODUCTS ---
 
-# -------------------- PRODUCTS --------------------
+# 2. Оновлений метод отримання продуктів через GSI Query
 @app.get("/products")
 def get_products():
     try:
         response = products_table.query(
             IndexName="sk-index",
-            KeyConditionExpression=Key("sk").eq("META"),
+            KeyConditionExpression=Key("sk").eq("META")
         )
         items = response.get("Items", [])
-
         return [
             {
                 "id": i["pk"].replace("PRODUCT#", ""),
                 "name": i["name"],
                 "price": float(i["price"]),
-            }
-            for i in items
+            } for i in items
         ]
-
     except Exception as e:
-        logger.error(f"Error fetching products: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch products")
+        print(f"Error fetching products: {e}")
+        return []
 
+# 3. Оновлений метод створення замовлення через точний get_item
 
-# -------------------- ORDERS --------------------
 @app.post("/orders")
 def create_order(product_id: str):
-    if not product_id:
-        raise HTTPException(status_code=400, detail="product_id required")
-
     try:
         resp = products_table.get_item(
             Key={"pk": f"PRODUCT#{product_id}", "sk": "META"}
@@ -212,7 +198,7 @@ def create_order(product_id: str):
         product = resp.get("Item")
 
         if not product:
-            raise HTTPException(status_code=404, detail="Product not found")
+            return {"error": "Product not found"}
 
         order_id = str(uuid.uuid4())
 
@@ -223,31 +209,35 @@ def create_order(product_id: str):
             "product_name": product["name"],
             "price": float(product["price"]),
             "status": "CREATED",
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.utcnow().isoformat()
         }
 
         orders_table.put_item(Item=item)
 
-        send_sqs_message({"order_id": order_id})
+        try:
+            sqs.send_message(
+                QueueUrl="http://localstack.default.svc.cluster.local:4566/000000000000/cloudmart-orders",
+                MessageBody=json.dumps({"order_id": order_id})
+            )
+        except Exception as e:
+            print("SQS ERROR:", e)
 
-        return {"order_id": order_id, "status": "CREATED"}
-
-    except HTTPException:
-        raise
+        return {
+            "order_id": order_id,
+            "status": "CREATED"
+        }
 
     except Exception as e:
-        logger.error(f"Order creation failed: {e}")
-        raise HTTPException(status_code=500, detail="order_creation_failed")
+        return {
+            "error": str(e),
+            "type": "order_creation_failed"
+        }
 
 
 @app.get("/orders")
-def list_orders(limit: int = 50):
-    try:
-        response = orders_table.scan(Limit=limit)
-        return response.get("Items", [])
-    except Exception as e:
-        logger.error(f"Error listing orders: {e}")
-        raise HTTPException(status_code=500, detail="Failed to list orders")
+def list_orders():
+    response = orders_table.scan()
+    return response.get("Items", [])
 
 
 @app.post("/orders/{order_id}/pay")
@@ -258,6 +248,7 @@ def pay_order(order_id: str):
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": "PAID"},
     )
+
     return {"order_id": order_id, "status": "PAID"}
 
 
@@ -269,27 +260,26 @@ def ship_order(order_id: str):
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": "SHIPPED"},
     )
+
     return {"order_id": order_id, "status": "SHIPPED"}
 
 
-# -------------------- METRICS --------------------
+# --- METRICS ---
 @app.get("/metrics")
 def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-
-# -------------------- CHAT --------------------
+# --- CHAT INTERNAL ---
 def list_products(limit: int = 50) -> List[Dict[str, Any]]:
+    # Використовуємо query через GSI (sk-index)
     resp = ddb.query(
         TableName=PRODUCTS_TABLE,
-        IndexName="sk-index",
+        IndexName="sk-index", # ОБОВ'ЯЗКОВО
         Limit=limit,
-        KeyConditionExpression="sk = :sk_val",
-        ExpressionAttributeValues={":sk_val": {"S": "META"}},
+        KeyConditionExpression="sk = :sk_val", # Змінено з Filter на KeyCondition
+        ExpressionAttributeValues={":sk_val": {"S": "META"}}
     )
-
     items = resp.get("Items", [])
-
     return [
         {
             "pk": it["pk"]["S"],
@@ -314,14 +304,16 @@ def ollama_chat(user_text: str, model: str) -> str:
         "stream": False,
     }
 
-    try:
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+    data = json.dumps(payload).encode("utf-8")
 
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
         with urllib.request.urlopen(req, timeout=60) as r:
             body = r.read()
 
@@ -329,8 +321,7 @@ def ollama_chat(user_text: str, model: str) -> str:
         return j.get("message", {}).get("content", "")
 
     except Exception as e:
-        logger.error(f"Ollama error: {e}")
-        return "AI service unavailable"
+        return f"Ollama error: {str(e)}"
 
 
 @app.post("/chat")
@@ -340,7 +331,7 @@ def chat(payload: ChatIn):
     if is_list_products_intent(text):
         return {
             "reply": "Ось список продуктів:",
-            "products": list_products(),
+            "products": list_products()
         }
 
     return {"reply": ollama_chat(text, OLLAMA_MODEL)}
