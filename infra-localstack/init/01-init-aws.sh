@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+echo "🚀 Initializing LocalStack resources..."
+
+# --- Create DynamoDB tables ---
+awslocal dynamodb create-table \
+  --table-name cloudmart_products \
+  --attribute-definitions \
+    AttributeName=pk,AttributeType=S \
+    AttributeName=sk,AttributeType=S \
+  --key-schema \
+    AttributeName=pk,KeyType=HASH \
+    AttributeName=sk,KeyType=RANGE \
+  --billing-mode PAY_PER_REQUEST || true
+
+awslocal dynamodb create-table \
+  --table-name cloudmart_orders \
+  --attribute-definitions \
+    AttributeName=pk,AttributeType=S \
+    AttributeName=sk,AttributeType=S \
+  --key-schema \
+    AttributeName=pk,KeyType=HASH \
+    AttributeName=sk,KeyType=RANGE \
+  --billing-mode PAY_PER_REQUEST || true
+
+# --- Create SQS queue ---
+awslocal sqs create-queue \
+  --queue-name cloudmart-orders || true
+
+# --- Seed products ---
+awslocal dynamodb put-item \
+  --table-name cloudmart_products \
+  --item '{
+    "pk": {"S": "PRODUCT#1"},
+    "sk": {"S": "META"},
+    "name": {"S": "CloudMart T-Shirt"},
+    "price": {"N": "25"}
+  }' || true
+
+echo "✅ LocalStack initialized"
