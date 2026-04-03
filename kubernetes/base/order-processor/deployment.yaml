@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-processor
+  namespace: cloudmart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-processor
+  template:
+    metadata:
+      labels:
+        app: order-processor
+    spec:
+      containers:
+      - name: order-processor
+        image: ghcr.io/YOUR_USER/order-processor:latest
+        command: ["python", "app.py"]
+        workingDir: /app
+        env:
+        - name: AWS_REGION
+          value: "us-east-1"
+
+        - name: LOCALSTACK_ENDPOINT
+          value: "http://localstack.default.svc.cluster.local:4566"
+
+        - name: SQS_QUEUE_URL
+          value: "http://localstack.default.svc.cluster.local:4566/000000000000/cloudmart-orders"
+
+        - name: DYNAMODB_TABLE
+          value: "cloudmart_orders"
