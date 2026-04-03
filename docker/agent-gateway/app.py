@@ -6,10 +6,11 @@ import logging
 import urllib.request
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from decimal import Decimal
 
 import boto3
 from botocore.config import Config
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, Request, Response, HTTPException, Query
 from pydantic import BaseModel
 
 from prometheus_client import (
@@ -31,6 +32,9 @@ APP_NAME = "agent-gateway"
 
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 LOCALSTACK_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT")
+
+if not LOCALSTACK_ENDPOINT:
+    raise Exception("LOCALSTACK_ENDPOINT is not set")
 
 PRODUCTS_TABLE = os.getenv("PRODUCTS_TABLE", "cloudmart_products")
 ORDERS_TABLE = os.getenv("ORDERS_TABLE", "cloudmart_orders")
@@ -82,34 +86,28 @@ sqs = boto3.client(
     aws_secret_access_key="test",
 )
 
-# -------------------- SQS HELPERS --------------------
-def get_queue_url() -> str:
-    try:
-        response = sqs.get_queue_url(QueueName="cloudmart-orders")
-        url = response["QueueUrl"]
-
-        if LOCALSTACK_ENDPOINT:
-            from urllib.parse import urlparse
-
-            endpoint = urlparse(LOCALSTACK_ENDPOINT)
-            path = urlparse(url).path
-            url = f"{endpoint.scheme}://{endpoint.hostname}:{endpoint.port}{path}"
-
-        logger.info(f"[SQS] Using Queue URL: {url}")
-        return url
-
-    except Exception as e:
-        logger.error(f"[SQS] Failed to get queue URL: {e}")
-        raise
+# -------------------- HELPERS --------------------
+def to_decimal(value):
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
 
 
+def to_float(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    return float(value) if value is not None else 0.0
+
+
+# -------------------- SQS --------------------
 def send_sqs_message(payload: dict):
-    queue_url = SQS_QUEUE_URL or get_queue_url()
+    if not SQS_QUEUE_URL:
+        raise Exception("SQS_QUEUE_URL not set")
 
     for attempt in range(3):
         try:
             sqs.send_message(
-                QueueUrl=queue_url,
+                QueueUrl=SQS_QUEUE_URL,
                 MessageBody=json.dumps(payload),
             )
             logger.info("SQS message sent")
@@ -164,7 +162,13 @@ def readyz():
 
     sqs_ok = True
     try:
-        _ = SQS_QUEUE_URL or get_queue_url()
+        if SQS_QUEUE_URL:
+            sqs.get_queue_attributes(
+                QueueUrl=SQS_QUEUE_URL,
+                AttributeNames=["QueueArn"],
+            )
+        else:
+            sqs_ok = False
     except Exception:
         sqs_ok = False
 
@@ -187,8 +191,8 @@ def get_products():
         return [
             {
                 "id": i["pk"].replace("PRODUCT#", ""),
-                "name": i["name"],
-                "price": float(i["price"]),
+                "name": i.get("name"),
+                "price": to_float(i.get("price", 0)),
             }
             for i in items
         ]
@@ -200,10 +204,7 @@ def get_products():
 
 # -------------------- ORDERS --------------------
 @app.post("/orders")
-def create_order(product_id: str):
-    if not product_id:
-        raise HTTPException(status_code=400, detail="product_id required")
-
+def create_order(product_id: str = Query(...)):
     try:
         resp = products_table.get_item(
             Key={"pk": f"PRODUCT#{product_id}", "sk": "META"}
@@ -220,31 +221,53 @@ def create_order(product_id: str):
             "pk": f"ORDER#{order_id}",
             "sk": "META",
             "product_id": product_id,
-            "product_name": product["name"],
-            "price": float(product["price"]),
+            "product_name": product.get("name"),
+            "price": to_decimal(product.get("price", 0)),
             "status": "CREATED",
             "created_at": datetime.utcnow().isoformat(),
         }
 
         orders_table.put_item(Item=item)
 
-        send_sqs_message({"order_id": order_id})
+        # 🔥 SQS не валить бізнес-логіку
+        try:
+            send_sqs_message({"order_id": order_id})
+        except Exception as e:
+            logger.error(f"SQS failed but order created: {e}")
 
-        return {"order_id": order_id, "status": "CREATED"}
+        return {
+            "order_id": order_id,
+            "status": "CREATED",
+        }
 
     except HTTPException:
         raise
 
     except Exception as e:
         logger.error(f"Order creation failed: {e}")
-#        raise HTTPException(status_code=500, detail="order_creation_failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(e),
+                "type": "order_creation_failed",
+            },
+        )
+
 
 @app.get("/orders")
 def list_orders(limit: int = 50):
     try:
         response = orders_table.scan(Limit=limit)
-        return response.get("Items", [])
+        items = response.get("Items", [])
+
+        return [
+            {
+                **i,
+                "price": to_float(i.get("price", 0)),
+            }
+            for i in items
+        ]
+
     except Exception as e:
         logger.error(f"Error listing orders: {e}")
         raise HTTPException(status_code=500, detail="Failed to list orders")
@@ -294,7 +317,7 @@ def list_products(limit: int = 50) -> List[Dict[str, Any]]:
         {
             "pk": it["pk"]["S"],
             "name": it.get("name", {}).get("S"),
-            "price": float(it.get("price", {}).get("N", "0")),
+            "price": float(it.get("price", {}).get("N", 0)),
         }
         for it in items
     ]
