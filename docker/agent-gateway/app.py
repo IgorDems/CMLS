@@ -237,8 +237,8 @@ def create_order(product_id: str):
 
     except Exception as e:
         logger.error(f"Order creation failed: {e}")
-        raise HTTPException(status_code=500, detail="order_creation_failed")
-
+#        raise HTTPException(status_code=500, detail="order_creation_failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/orders")
 def list_orders(limit: int = 50):
