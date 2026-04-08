@@ -17,4 +17,4 @@ spec:
           service:
             name: agent-gateway
             port:
-              number: 8080 # Змінено на 8080, як у вашому бекенді
+              number: 80 # Змінено на 8080, як у вашому бекенді
