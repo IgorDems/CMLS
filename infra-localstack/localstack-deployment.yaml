@@ -27,7 +27,7 @@ spec:
 
           env:
             - name: SERVICES
-              value: "dynamodb,sqs"
+              value: "s3,dynamodb,sqs,sns,iam,sts,lambda,apigateway,ec2,cloudwatch,route53,secretsmanager"
 
             - name: LS_LOG
               value: "info"
