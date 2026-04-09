@@ -1,0 +1,12 @@
+# Тераформ файли стану
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Змінні з секретами
+*.tfvars
+*.tfvars.json
+
+# Логи
+terraform.tflog
