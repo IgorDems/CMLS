@@ -21,6 +21,12 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Run Diagnostics
+      run: chmod +x scripts/check-environment.sh && ./scripts/check-environment.sh
+
+    - name: Run Diagnostics
+      run: chmod +x scripts/check-environment.sh && ./scripts/check-environment.sh
+
     - name: Set tag
       run: echo "TAG=${GITHUB_SHA}" >> $GITHUB_ENV
 

@@ -1,12 +1,27 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
 resources:
 - ../../base/namespace
 - ../../base/ollama
 - ../../base/agent-gateway
 - ../../base/monitoring
 - ../../base/localstack
+# Додаємо ресурси для CloudMart
+- ../../base/cloudmart-backend
+- ../../base/cloudmart-frontend
+
 images:
 - name: ghcr.io/igordems/agent-gateway
   newName: ghcr.io/igordems/agent-gateway
   newTag: d222648f56e18f414d152672f6c4aaee9ca9ac89
+
+  
+# Додаємо записи для автоматичного оновлення CloudMart
+- name: cloudmart-backend
+  newName: ghcr.io/igordems/cloudmart-backend
+  newTag: latest
+- name: cloudmart-frontend
+  newName: ghcr.io/igordems/cloudmart-frontend
+  newTag: latest
+>>>>>>> 13d6ddf (feat: add cloudmart workflows, kustomize config and diagnostic script)
