@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudmart-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudmart-backend
+  template:
+    metadata:
+      labels:
+        app: cloudmart-backend
+    spec:
+      containers:
+      - name: cloudmart-backend
+        image: cloudmart-backend
+        ports:
+        - containerPort: 8080
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: "test"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "test"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AWS_S3_ENDPOINT
+          value: "http://localstack.default.svc.cluster.local:4566"
