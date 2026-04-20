@@ -11,12 +11,12 @@ resources:
 - ../../base/cloudmart-frontend
 
 images:
-- name: ghcr.io/igordems/agent-gateway
-  newName: ghcr.io/igordems/agent-gateway
-  newTag: "d222648f56e18f414d152672f6c4aaee9ca9ac89"
 - name: cloudmart-backend
   newName: ghcr.io/igordems/cloudmart-backend
-  newTag: "latest"
+  newTag: latest
 - name: cloudmart-frontend
   newName: ghcr.io/igordems/cloudmart-frontend
-  newTag: "latest"
+  newTag: latest
+- name: ghcr.io/igordems/agent-gateway
+  newName: ghcr.io/igordems/agent-gateway
+  newTag: 6124b6e484174f4d0a3846aa2b5e24b0bbf1692c
