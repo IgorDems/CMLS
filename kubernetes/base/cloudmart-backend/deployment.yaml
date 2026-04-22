@@ -13,16 +13,24 @@ spec:
         app: cloudmart-backend
     spec:
       containers:
-      - name: cloudmart-backend
-        image: cloudmart-backend
-        ports:
-        - containerPort: 8080
-        env:
-        - name: AWS_ACCESS_KEY_ID
-          value: "test"
-        - name: AWS_SECRET_ACCESS_KEY
-          value: "test"
-        - name: AWS_REGION
-          value: "us-east-1"
-        - name: AWS_S3_ENDPOINT
-          value: "http://localstack.default.svc.cluster.local:4566"
+        - name: cloudmart-backend
+          image: ghcr.io/igordems/cloudmart-backend:latest
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value: test
+            - name: AWS_SECRET_ACCESS_KEY
+              value: test
+            - name: AWS_REGION
+              value: us-east-1
+            - name: AWS_S3_ENDPOINT
+              value: http://localstack.default.svc.cluster.local:4566
+            # --- НОВІ ЗМІННІ ДЛЯ OLLAMA ---
+            - name: OPENAI_API_KEY
+              value: "ollama"
+            - name: OPENAI_BASE_URL
+              value: "http://ollama-service.ollama.svc.cluster.local:11434/v1"
+            - name: LLM_MODEL
+              value: "llama3"
+            # ------------------------------
+          ports:
+            - containerPort: 8080 # Переконайтеся, що порт збігається з тим, що слухає ваш додаток

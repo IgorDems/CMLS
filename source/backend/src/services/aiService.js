@@ -17,7 +17,10 @@ const bedrockAgentClient = new BedrockAgentRuntimeClient({
 });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+//  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || 'ollama', // Ollama ігнорує ключ, але бібліотека його вимагає
+  baseURL: process.env.OPENAI_BASE_URL || 'http://localhost:11434/v1', // Додаємо шлях до Ollama
+
 });
 
 const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
@@ -61,11 +64,26 @@ export const createOpenAIConversation = async () => {
   return thread.id;
 };
 
+//export const sendOpenAIMessage = async (threadId, message) => {
+//  await openai.beta.threads.messages.create(threadId, {
+//    role: "user",
+//    content: message,
+//  });
+
+
 export const sendOpenAIMessage = async (threadId, message) => {
-  await openai.beta.threads.messages.create(threadId, {
-    role: "user",
-    content: message,
-  });
+  try {
+    const response = await openai.chat.completions.create({
+      model: process.env.LLM_MODEL || "llama3", // використовуємо змінну з вашого Deployment
+      messages: [{ role: "user", content: message }],
+    });
+
+    return response.choices[0].message.content;
+  } catch (error) {
+    console.error("AI Service Error:", error);
+    throw new Error("Не вдалося отримати відповідь від локальної моделі.");
+  }
+}; 
 
   const run = await openai.beta.threads.runs.create(threadId, {
     assistant_id: ASSISTANT_ID,
