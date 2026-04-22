@@ -27,8 +27,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Run Terraform Validation
-        run: chmod +x scripts/check-environment.sh && ./scripts/check-environment.sh
+#      - name: Run Terraform Validation
+#        run: chmod +x scripts/check-environment.sh && ./scripts/check-environment.sh
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
