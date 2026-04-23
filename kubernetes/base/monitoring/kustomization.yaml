@@ -3,3 +3,12 @@ kind: Kustomization
 resources:
   - grafana-ingress.yaml
   - prometheus-rules.yaml
+patches:
+  - target:
+      kind: Deployment
+      name: monitoring-grafana
+    patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          kubernetes.io/hostname: aorus
