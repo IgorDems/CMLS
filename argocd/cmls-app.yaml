@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cmls-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/IgorDems/CMLS.git
+    path: kubernetes/overlays/lab # Вказуємо на оверлей
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    # ВАЖЛИВО: Залишаємо порожнім! 
+    # Це дозволяє Kustomize самому розкидати ресурси по monitoring та cloudmart
+    namespace: "" 
+  syncPolicy:
+    automated:
+      prune: true     # Автоматично видаляти ресурси, яких немає в Git (прибере дублікати)
+      selfHeal: true  # Повертати стан кластера до того, що в Git
+    syncOptions:
+      - CreateNamespace=true # Argo сам створить неймспейси, якщо вони описані в Kustomize
