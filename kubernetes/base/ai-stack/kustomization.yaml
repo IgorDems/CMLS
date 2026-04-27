@@ -1,3 +1,4 @@
 resources:
   - openwebui-deployment.yaml
   - openwebui-ingress.yaml
+  - open-webui.yaml

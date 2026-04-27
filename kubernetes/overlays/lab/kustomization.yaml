@@ -2,10 +2,14 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- ../../base/ai-stack
 - ../../base/namespace
 - ../../base/ollama
+- ../../base/ai-stack # Додаємо сюди
 - ../../base/agent-gateway
+- ../../base/ai-stack
+- ../../base/namespace
+#- ../../base/ollama
+#- ../../base/agent-gateway
 - ../../base/monitoring
 - ../../base/localstack
 - ../../base/cloudmart-backend
