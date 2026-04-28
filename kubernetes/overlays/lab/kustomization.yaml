@@ -1,15 +1,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-#- ../../base/ollama
-#- ../../base/agent-gateway
 resources:
 - ../../base/namespace
 - ../../base/ollama
 - ../../base/ai-stack
 - ../../base/agent-gateway
-- ../../base/ai-stack
-- ../../base/namespace
 - ../../base/monitoring
 - ../../base/localstack
 - ../../base/cloudmart-backend
@@ -24,4 +20,4 @@ images:
   newTag: latest
 - name: ghcr.io/igordems/agent-gateway
   newName: ghcr.io/igordems/agent-gateway
-  newTag: 4cda5be61f0c0c311916f0efe6a92ece2aae7202
+  newTag: 1a74ec2ecd367f769e6a1654f886f416b71d8b3b
