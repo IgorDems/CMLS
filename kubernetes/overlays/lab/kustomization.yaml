@@ -20,4 +20,4 @@ images:
   newTag: latest
 - name: ghcr.io/igordems/agent-gateway
   newName: ghcr.io/igordems/agent-gateway
-  newTag: aa9be352be91fb252e5cd610f5d9e6a7470195cc
+  newTag: 49f2b10a9dadc9ac1bdaff7740184fd03c62624c
