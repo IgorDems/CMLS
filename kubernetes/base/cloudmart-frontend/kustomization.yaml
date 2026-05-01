@@ -4,3 +4,4 @@ namespace: cloudmart # <--- ДОДАТИ ЦЕЙ РЯДОК
 resources:
   - deployment.yaml
   - service.yaml
+  - ingress.yaml

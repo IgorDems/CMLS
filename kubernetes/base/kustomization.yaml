@@ -6,4 +6,3 @@ resources:
   - monitoring/
   - cloudmart-backend/
   - cloudmart-frontend/
-  - frontend/ingress.yaml
