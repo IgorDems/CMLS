@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cloudmart-frontend-ingress
+  namespace: cloudmart
+  annotations:
+    # Вказуємо, що використовуємо саме Nginx Ingress
+    kubernetes.io/ingress.class: nginx
+    # Опція для коректної маршрутизації шляхів
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # Додаткова оптимізація для великих статичних файлів React
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  rules:
+    # Ваш персональний домен через sslip.io (вказуємо IP сервера aorus)
+  - host: cloudmart.192.168.1.112.sslip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            # Назва має збігатися з назвою вашого Service для фронтенду
+            name: cloudmart-frontend
+            port:
+              number: 3000
