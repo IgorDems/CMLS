@@ -8,5 +8,5 @@ spec:
     app: cloudmart-frontend
   ports:
     - protocol: TCP
-      port: 3000       # Зовнішній порт сервісу (залишаємо як було)
-      targetPort: 5001 # ПОРТ У КОНТЕЙНЕРІ (Змінюємо на 5001)
+      port: 3000       # Зовнішній порт сервісу
+      targetPort: 3000 # ПОРТ У КОНТЕЙНЕРІ
