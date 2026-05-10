@@ -6,3 +6,4 @@ namespace: cloudmart
 resources:
 - deployment.yaml
 - service.yaml
+- cloudmart-backend-ingress.yaml
