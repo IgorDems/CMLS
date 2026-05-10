@@ -5,6 +5,4 @@ metadata:
   namespace: metallb-system
 spec:
   ipAddressPools:
-    - lan-pool
-  interfaces:
-    - enp7s0
+  - lan-pool

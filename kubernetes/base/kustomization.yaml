@@ -6,3 +6,4 @@ resources:
   - monitoring/
   - cloudmart-backend/
   - cloudmart-frontend/
+  - metallb/
