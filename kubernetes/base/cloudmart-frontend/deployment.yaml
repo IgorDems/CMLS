@@ -21,4 +21,4 @@ spec:
         command: ["npx", "serve", "-s", ".", "-l", "3000"]
         env:
         - name: REACT_APP_API_URL
-          value: "http://cloudmart-backend:8080"
+          value: "http://api.192.168.1.240.sslip.io"
