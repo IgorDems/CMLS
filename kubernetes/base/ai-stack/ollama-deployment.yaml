@@ -13,6 +13,8 @@ spec:
       labels:
         app: ollama
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: aorus # Завжди запускати там, де лежать файли
       containers:
       - name: ollama
         image: ollama/ollama:latest
@@ -22,11 +24,10 @@ spec:
         - name: OLLAMA_MODELS
           value: "/root/.ollama/models"
         volumeMounts:
-        - name: host-models
-          mountPath: /root/.ollama/models # Шлях всередині контейнера
+        - name: host-ollama-root
+          mountPath: /root/.ollama # Монтуємо в корінь робочої папки
       volumes:
-      - name: host-models
+      - name: host-ollama-root
         hostPath:
-          path: /mnt/data/.ollama/models # ВАШ ШЛЯХ НА ДИСКУ AORUS
+          path: /mnt/data/.ollama # Шлях до батьківської папки на хості
           type: Directory
-
