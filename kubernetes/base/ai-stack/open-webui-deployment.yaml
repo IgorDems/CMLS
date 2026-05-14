@@ -20,7 +20,7 @@ spec:
         env:
         - name: OLLAMA_BASE_URL
           # Використовуємо вашу перевірену адресу сервісу Ollama
-          value: "http://ollama-service.ollama.svc.cluster.local:11434"
+          value: "http://ollama-service:11434"
         volumeMounts:
         - name: open-webui-storage
           mountPath: /app/backend/data
