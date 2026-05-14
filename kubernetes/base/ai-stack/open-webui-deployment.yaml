@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: open-webui
-  namespace: cloudmart
 spec:
   replicas: 1
   selector:
@@ -20,14 +19,12 @@ spec:
         - containerPort: 8080
         env:
         - name: OLLAMA_BASE_URL
-          # Оновлено URL: звертаємось до Ollama в її неймспейсі
-          value: "http://ollama.ollama.svc.cluster.local:11434"
-        - name: DATA_DIR
-          value: "/app/data" # Вказуємо шлях до даних всередині контейнера
+          # Використовуємо вашу перевірену адресу сервісу Ollama
+          value: "http://ollama-service.ollama.svc.cluster.local:11434"
         volumeMounts:
-        - name: webui-data
-          mountPath: /app/data # Прив'язуємо PVC до папки з даними
+        - name: open-webui-storage
+          mountPath: /app/backend/data
       volumes:
-      - name: webui-data
+      - name: open-webui-storage
         persistentVolumeClaim:
-          claimName: open-webui-pvc # Використовуємо створений вище PVC
+          claimName: open-webui-pvc

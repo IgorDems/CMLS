@@ -2,11 +2,10 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: open-webui-pvc
-  namespace: cloudmart # ЗМІНА: Перенесено з default до cloudmart для ізоляції проєкту
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: local-path # Використовуємо ваш стандартний storage class
   resources:
     requests:
-      storage: 10Gi # Об'єм збережено згідно з вашими попередніми налаштуваннями
+      storage: 2Gi
+  storageClassName: local-path
