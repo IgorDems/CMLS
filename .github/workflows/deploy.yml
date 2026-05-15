@@ -1,0 +1,38 @@
+name: Deploy CloudMart
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Встановлюємо Kustomize правильно (Рішення помилки tar)
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "5.0.0"
+
+      # Логіка оновлення образу (приклад для бекенду)
+      - name: Update Backend Image
+        run: |
+          cd kubernetes/base/cloudmart-backend
+          kustomize edit set image ghcr.io/igordems/cloudmart-backend=${{ github.sha }}
+          
+      # Логіка оновлення образу (приклад для фронтенду)
+      - name: Update Frontend Image
+        run: |
+          cd kubernetes/base/cloudmart-frontend
+          kustomize edit set image ghcr.io/igordems/cloudmart-frontend=${{ github.sha }}
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Bump images to ${{ github.sha }} [skip ci]"
+          git push origin main
