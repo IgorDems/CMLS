@@ -23,7 +23,7 @@ jobs:
       - name: Update Backend Image
         run: |
           cd kubernetes/base/cloudmart-backend
-          kustomize edit set image ghcr.io/igordems/cloudmart-backend=${{ github.sha }}
+          kustomize edit set image ghcr.io/igordems/cloudmart-backend=ghcr.io/igordems/cloudmart-backend:${{ github.sha }}
           
       # Логіка оновлення образу (приклад для фронтенду)
       - name: Update Frontend Image
