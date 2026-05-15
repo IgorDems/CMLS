@@ -3,6 +3,8 @@ name: Deploy CloudMart
 on:
   push:
     branches: [ main ]
+permissions:
+  contents: write
 
 jobs:
   build-and-deploy:
@@ -31,8 +33,8 @@ jobs:
 
       - name: Commit and Push changes
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "dems_i@yahoo.com"
+          git config --local user.name "IgorDems"
           git add .
           git commit -m "Bump images to ${{ github.sha }} [skip ci]"
           git push origin main
