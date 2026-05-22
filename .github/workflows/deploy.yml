@@ -24,7 +24,7 @@ jobs:
         run: |
           cd kubernetes/base/cloudmart-backend
           kustomize edit set image ghcr.io/igordems/cloudmart-backend=ghcr.io/igordems/cloudmart-backend:${{ github.sha }}
-          
+
       # Логіка оновлення образу (приклад для фронтенду)
       - name: Update Frontend Image
         run: |
@@ -33,9 +33,17 @@ jobs:
 
       - name: Commit and Push changes
         run: |
-          git config --local user.email "dems_i@yahoo.com"
-          git config --local user.name "IgorDems"
-          git add .
-          git commit -m "Bump images to ${{ github.sha }} [skip ci]"
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          
+          # 1. Додаємо змінені файли маніфестів
+          git add kubernetes/overlays/lab/kustomization.yaml
+          
+          # 2. Створюємо коміт, якщо є реальні зміни
+          git commit -m "update agent-gateway image to $TAG" || echo "no changes"
+          
+          # 3. КРИТИЧНО: підтягуємо свіжі зміни з GitHub у режимі rebase
           git pull --rebase origin main
+          
+          # 4. Робимо безпечний push
           git push origin main

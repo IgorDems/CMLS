@@ -65,4 +65,9 @@ jobs:
         git add kubernetes/overlays/lab/kustomization.yaml
         git commit -m "update agent-gateway image to $TAG" || echo "no changes"
 
-        git push
+        # Спроба затягнути останні зміни та зробити push. Якщо хтось перегнав, робимо rebase з повтором.
+        for i in {1..5}; do
+          git pull --rebase origin main && git push origin main && break
+          echo "Push rejected, retrying in 5 seconds..."
+          sleep 5
+        done
