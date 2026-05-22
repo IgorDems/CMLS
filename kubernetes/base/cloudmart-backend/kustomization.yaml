@@ -10,4 +10,4 @@ resources:
 images:
 - name: ghcr.io/igordems/cloudmart-backend
   newName: ghcr.io/igordems/cloudmart-backend
-  newTag: latest
+  newTag: 1c719c1f52fd6461c1dbe7c7a1bb252999de0d8e
