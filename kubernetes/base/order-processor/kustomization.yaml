@@ -4,8 +4,4 @@ kind: Kustomization
 namespace: cloudmart
 
 resources:
-  - configmap-env.yaml
   - deployment.yaml
-  - service.yaml
-  - ingress.yaml
-  - servicemonitor.yaml

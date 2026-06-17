@@ -1,12 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: cloudmart-frontend
+  name: cloudmart-frontend-app-service
   namespace: cloudmart
 spec:
+  type: ClusterIP
   selector:
-    app: cloudmart-frontend
+    app: cloudmart-frontend-app
   ports:
     - protocol: TCP
-      port: 3000       # Зовнішній порт сервісу
-      targetPort: 3000 # ПОРТ У КОНТЕЙНЕРІ
+      port: 5001
+      targetPort: 5001

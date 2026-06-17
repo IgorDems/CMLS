@@ -1,36 +1,66 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cloudmart-backend
+  name: cloudmart-backend-app
+  namespace: cloudmart
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cloudmart-backend
+      app: cloudmart-backend-app
   template:
     metadata:
       labels:
-        app: cloudmart-backend
+        app: cloudmart-backend-app
     spec:
       containers:
-        - name: cloudmart-backend
-          image: ghcr.io/igordems/cloudmart-backend:latest
-          env:
-            - name: AWS_ACCESS_KEY_ID
-              value: test
-            - name: AWS_SECRET_ACCESS_KEY
-              value: test
-            - name: AWS_REGION
-              value: us-east-1
-            - name: AWS_S3_ENDPOINT
-              value: http://localstack.default.svc.cluster.local:4566
-            # --- НОВІ ЗМІННІ ДЛЯ OLLAMA ---
-            - name: OPENAI_API_KEY
-              value: "ollama"
-            - name: OPENAI_BASE_URL
-              value: "http://ollama-service.ollama.svc.cluster.local:11434/v1"
-            - name: LLM_MODEL
-              value: "llama3"
-            # ------------------------------
-          ports:
-            - containerPort: 8080 # Переконайтеся, що порт збігається з тим, що слухає ваш додаток
+      - name: cloudmart-backend-app
+        # Тег :latest замінимо у GitHub Actions пайплайні динамічно
+        image: ghcr.io/igordems/cmls/cloudmart-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: PORT
+          value: "5000"
+        - name: AWS_REGION
+          value: "us-east-1"
+        
+        # --- КОНФІГУРАЦІЯ ДЛЯ ЛОКАЛЬНОГО AWS (LOCALSTACK) ---
+        - name: AWS_ACCESS_KEY_ID
+          value: "test"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "test"
+        # Використовуємо внутрішній DNS сервісу LocalStack у вашому кластері
+        - name: AWS_ENDPOINT_URL
+          value: "http://localstack-service.default.svc.cluster.local:4566"
+        
+        # --- ІНТЕГРАЦІЯ З ЛОКАЛЬНИМ AI (OLLAMA / OPEN WEBUI) ---
+        # Замість хмарного Bedrock перенаправляємо запити на локальний сервіс Ollama
+        - name: BEDROCK_AGENT_ID
+          value: "local"
+        - name: BEDROCK_AGENT_ALIAS_ID
+          value: "local"
+        - name: OLLAMA_API_BASE_URL
+          value: "http://ollama-service.cloudmart.svc.cluster.local:11434"
+
+        # --- ПЛАТФОРМИ НА МАЙБУТНЄ (Зарезервовані Environment) ---
+        # Для Google Cloud (GCP)
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/var/secrets/google/key.json"
+        # Для Microsoft Azure
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-secret
+              key: connection-string
+              optional: true # Не буде падати, якщо секрету ще немає
+        volumeMounts:
+        - name: gcp-secret-volume
+          mountPath: /var/secrets/google
+          readOnly: true
+      volumes:
+      - name: gcp-secret-volume
+        secret:
+          secretName: gcp-sa-secret
+          optional: true # Дозволяє поду стартувати без помилок, поки GCP не налаштовано

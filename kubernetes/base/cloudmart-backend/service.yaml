@@ -1,11 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: cloudmart-backend
+  name: cloudmart-backend-app-service
+  namespace: cloudmart
 spec:
+  type: ClusterIP
   selector:
-    app: cloudmart-backend
+    app: cloudmart-backend-app
   ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 8080
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
