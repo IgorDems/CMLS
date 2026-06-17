@@ -1,22 +1,62 @@
-- name: Commit & push
+name: cloudmart-gitops
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docker/**'
+      - 'kubernetes/**'
+      - 'source/**'
+
+jobs:
+  update-manifests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install kustomize
+      run: |
+        curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+        sudo mv kustomize /usr/local/bin/
+
+    - name: Update images in kustomization
+      run: |
+        TAG=sha-${GITHUB_SHA::7}
+        REGISTRY=ghcr.io/${{ github.repository_owner }}
+        
+        # Переходимо безпосередньо у папки base, які ми виділили як суверенні мікросервіси
+        cd kubernetes/base/cloudmart-backend
+        kustomize edit set image ghcr.io/${{ github.repository_owner }}/cloudmart-backend=$REGISTRY/cloudmart-backend:$TAG
+        
+        cd ../cloudmart-frontend
+        kustomize edit set image ghcr.io/${{ github.repository_owner }}/cloudmart-frontend=$REGISTRY/cloudmart-frontend:$TAG
+
+    - name: Commit & push
       run: |
         git config user.name "github-actions"
         git config user.email "actions@github.com"
+        
+        # Повертаємося в корінь репозиторію про всяк випадок
+        cd ${{ github.workspace }}
 
         # Захист циклом pull --rebase від конфліктів паралельного пушу
         for i in {1..5}; do
           echo "GitOps Sync Attempt $i..."
           
-          # 1. Завжди додаємо та комітимо поточні зміни перед rebase
+          # Примусово додаємо абсолютно ВСЕ, що змінив kustomize всередині папки base
           git add .
           git commit -m "deploy: update cloudmart images to sha-${GITHUB_SHA::7}" || echo "No new changes to commit"
           
-          # 2. Намагаємося стягнути зміни і запушити
+          # Стягуємо свіжі комміти і штовхаємо
           if git pull --rebase origin main && git push origin main; then
             echo "GitOps successfully synchronized!"
             break
           fi
           
-          echo "Push rejected or conflict occurred. Retrying in 5 seconds..."
+          echo "Push rejected, retrying in 5 seconds..."
           sleep 5
         done
