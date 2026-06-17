@@ -1,46 +1,22 @@
-name: cloudmart-gitops
-
-on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-
-jobs:
-  update-manifests:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Install kustomize
-      run: |
-        curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
-        mv kustomize /usr/local/bin/
-
-    - name: Update images in kustomization
-      run: |
-        TAG=sha-${GITHUB_SHA::7}
-        REGISTRY=ghcr.io/${{ github.repository_owner }}
-        cd kubernetes/overlays/lab # Або інший шлях до твого kustomization.yaml
-        
-        kustomize edit set image cloudmart-backend=$REGISTRY/cloudmart-backend:$TAG
-        kustomize edit set image cloudmart-frontend=$REGISTRY/cloudmart-frontend:$TAG
-
-    - name: Commit & push
+- name: Commit & push
       run: |
         git config user.name "github-actions"
         git config user.email "actions@github.com"
-        git add .
-        git commit -m "deploy: update cloudmart images to sha-${GITHUB_SHA::7}" || echo "no changes"
-        
-        # Захист від паралельних запусків
+
+        # Захист циклом pull --rebase від конфліктів паралельного пушу
         for i in {1..5}; do
-          git pull --rebase origin main && git push origin main && break
-          echo "Push rejected, retrying in 5 seconds..."
+          echo "GitOps Sync Attempt $i..."
+          
+          # 1. Завжди додаємо та комітимо поточні зміни перед rebase
+          git add .
+          git commit -m "deploy: update cloudmart images to sha-${GITHUB_SHA::7}" || echo "No new changes to commit"
+          
+          # 2. Намагаємося стягнути зміни і запушити
+          if git pull --rebase origin main && git push origin main; then
+            echo "GitOps successfully synchronized!"
+            break
+          fi
+          
+          echo "Push rejected or conflict occurred. Retrying in 5 seconds..."
           sleep 5
         done
