@@ -1,27 +1,27 @@
 - name: Commit & push
-      run: |
-        git config user.name "github-actions"
-        git config user.email "actions@github.com"
+  run: |
+    git config user.name "github-actions"
+    git config user.email "actions@github.com"
         
         # Переконуємося, що ми в корені репозиторію раннера
-        cd ${{ github.workspace }}
+    cd ${{ github.workspace }}
         
         # Захист циклом pull --rebase від конфліктів паралельного пушу
-        for i in {1..5}; do
-          echo "GitOps Sync Attempt $i..."
+    for i in {1..5}; do
+      echo "GitOps Sync Attempt $i..."
           
           # Примусово додаємо абсолютно ВСЕ, що було змінено утилітами під час цього білду
-          git add .
+      git add .
           
           # Створюємо коміт із міткою [skip ci]
-          git commit -m "chore: auto-update cloudmart images to sha-${GITHUB_SHA::7} [skip ci]" || echo "no changes"
+      git commit -m "chore: auto-update cloudmart images to sha-${GITHUB_SHA::7} [skip ci]" || echo "no changes"
           
           # Безпечно стягуємо зміни з rebase та пушимо
-          if git pull --rebase origin main && git push origin main; then
-            echo "GitOps successfully synchronized!"
-            break
-          fi
+      if git pull --rebase origin main && git push origin main; then
+        echo "GitOps successfully synchronized!"
+        break
+      fi
           
-          echo "Push rejected, retrying in 5 seconds..."
-          sleep 5
-        done
+      echo "Push rejected, retrying in 5 seconds..."
+      sleep 5
+   done
