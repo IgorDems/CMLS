@@ -1,13 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 namespace: cloudmart
-
 resources:
 - deployment.yaml
 - service.yaml
 - cloudmart-backend-ingress.yaml
-
 images:
 - name: ghcr.io/igordems/cloudmart-backend
   newName: ghcr.io/igordems/cloudmart-backend
