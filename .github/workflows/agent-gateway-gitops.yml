@@ -24,9 +24,6 @@ jobs:
     - name: Run Diagnostics
       run: chmod +x scripts/check-environment.sh && ./scripts/check-environment.sh
 
-    - name: Run Diagnostics
-      run: chmod +x scripts/check-environment.sh && ./scripts/check-environment.sh
-
     - name: Set tag
       run: echo "TAG=${GITHUB_SHA}" >> $GITHUB_ENV
 
@@ -55,7 +52,7 @@ jobs:
     - name: Update image tag in kustomization
       run: |
         cd kubernetes/overlays/lab
-        kustomize edit set image $IMAGE=$IMAGE:$TAG
+        kustomize edit set image ${IMAGE}=${IMAGE}:${TAG}
 
     - name: Commit & push
       run: |
