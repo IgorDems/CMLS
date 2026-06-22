@@ -35,15 +35,16 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          
-          # 1. Додаємо змінені файли маніфестів
-          git add kubernetes/overlays/lab/kustomization.yaml
-          
-          # 2. Створюємо коміт, якщо є реальні зміни
-          git commit -m "update agent-gateway image to $TAG" || echo "no changes"
-          
-          # 3. КРИТИЧНО: підтягуємо свіжі зміни з GitHub у режимі rebase
-          git pull --rebase origin main
-          
-          # 4. Робимо безпечний push
-          git push origin main
+
+          # 1. Додаємо АБСОЛЮТНО ВСІ змінені маніфести (базові та оверлеї)
+          git add .
+
+          # 2. Створюємо коміт із міткою [skip ci] та підставляємо правильну змінну github.sha
+          git commit -m "chore: auto-update cloudmart images to ${{ github.sha }} [skip ci]" || echo "no changes"
+
+          # 3. Захищений цикл підтягування свіжих змін та push
+          for i in {1..5}; do
+            git pull --rebase origin main && git push origin main && break
+            echo "Push rejected, retrying in 5 seconds..."
+            sleep 5
+          done
