@@ -7,4 +7,4 @@ resources:
 - ingress.yaml
 images:
 - name: ghcr.io/igordems/cloudmart-frontend
-  newName: ff4ef4c393d966685d911af410b7538a9e3356a7
+  newTag: latest
