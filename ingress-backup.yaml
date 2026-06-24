@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    argocd.argoproj.io/tracking-id: cmls-app:networking.k8s.io/Ingress:cloudmart/cloudmart-frontend-ingress
+    field.cattle.io/publicEndpoints: '[{"addresses":["192.168.1.240"],"port":80,"protocol":"HTTP","serviceName":"cloudmart:cloudmart-frontend-app-service","ingressName":"cloudmart:cloudmart-frontend-ingress","hostname":"cloudmart.192.168.1.240.sslip.io","path":"/","allNodes":false}]'
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"cmls-app:networking.k8s.io/Ingress:cloudmart/cloudmart-frontend-ingress","kubernetes.io/ingress.class":"nginx","nginx.ingress.kubernetes.io/ssl-redirect":"false"},"name":"cloudmart-frontend-ingress","namespace":"cloudmart"},"spec":{"rules":[{"host":"cloudmart.192.168.1.240.sslip.io","http":{"paths":[{"backend":{"service":{"name":"cloudmart-frontend-app-service","port":{"number":5001}}},"path":"/","pathType":"Prefix"}]}}]}}
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  creationTimestamp: "2026-05-01T06:47:29Z"
+  generation: 3
+  name: cloudmart-frontend-ingress
+  namespace: cloudmart
+  resourceVersion: "21370098"
+  uid: 4e3212e1-36f4-46d1-9847-02c48ffff982
+spec:
+  rules:
+  - host: cloudmart.192.168.1.240.sslip.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: cloudmart-frontend-app-service
+            port:
+              number: 5001
+        path: /
+        pathType: Prefix
+status:
+  loadBalancer:
+    ingress:
+    - ip: 192.168.1.240

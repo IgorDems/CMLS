@@ -4,7 +4,7 @@ namespace: cloudmart
 resources:
 - deployment.yaml
 - service.yaml
-- cloudmart-backend-ingress.yaml
+- ingress.yaml
 images:
 - name: ghcr.io/igordems/cloudmart-backend
   newName: ghcr.io/igordems/cloudmart-backend

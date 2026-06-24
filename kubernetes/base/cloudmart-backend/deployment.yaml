@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cloudmart-backend-app
+  name: cloudmart-backend
   namespace: cloudmart
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cloudmart-backend-app
+      app: cloudmart-backend
   template:
     metadata:
       labels:
-        app: cloudmart-backend-app
+        app: cloudmart-backend
     spec:
       containers:
-      - name: cloudmart-backend-app
+      - name: cloudmart-backend
         # Тег :latest замінимо у GitHub Actions пайплайні динамічно
-        image: ghcr.io/igordems/cmls/cloudmart-backend:latest
+        image: ghcr.io/igordems/cloudmart-backend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
@@ -25,7 +25,9 @@ spec:
           value: "5000"
         - name: AWS_REGION
           value: "us-east-1"
-        
+        - name: OPENAI_API_KEY
+          value: "dummy-key"
+
         # --- КОНФІГУРАЦІЯ ДЛЯ ЛОКАЛЬНОГО AWS (LOCALSTACK) ---
         - name: AWS_ACCESS_KEY_ID
           value: "test"
@@ -34,7 +36,7 @@ spec:
         # Використовуємо внутрішній DNS сервісу LocalStack у вашому кластері
         - name: AWS_ENDPOINT_URL
           value: "http://localstack-service.default.svc.cluster.local:4566"
-        
+
         # --- ІНТЕГРАЦІЯ З ЛОКАЛЬНИМ AI (OLLAMA / OPEN WEBUI) ---
         # Замість хмарного Bedrock перенаправляємо запити на локальний сервіс Ollama
         - name: BEDROCK_AGENT_ID
