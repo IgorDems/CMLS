@@ -44,10 +44,14 @@ jobs:
       run: |
         docker push $IMAGE:$TAG
 
-    - name: Install kustomize
-      uses: kubernetes-sigs/setup-kustomize@v3
-      with:
-        kustomize-version: "5.4.2"
+    - name: Install Kustomize
+      run: |
+        KUSTOMIZE_VERSION="5.4.2"
+        curl -sLO "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+        tar -xzf "kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+        chmod +x kustomize
+        sudo mv kustomize /usr/local/bin/
+        rm "kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
 
     - name: Update image tag in kustomization
       run: |
