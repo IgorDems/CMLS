@@ -6,17 +6,9 @@ metadata:
   namespace: cloudmart
 
 spec:
-
-  type: ClusterIP
-
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5001
   selector:
     app: cloudmart-frontend
-
-
-  ports:
-
-  - name: http
-
-    port: 80
-
-    targetPort: 3000

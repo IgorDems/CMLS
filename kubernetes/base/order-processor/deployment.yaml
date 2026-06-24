@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: order-processor
-        image: ghcr.io/YOUR_USER/order-processor:latest
+        image: ghcr.io/igordems/cloudmart-order-processor:latest
         command: ["python", "app.py"]
         workingDir: /app
         env:
