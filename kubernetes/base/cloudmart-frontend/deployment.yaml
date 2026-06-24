@@ -1,24 +1,44 @@
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: cloudmart-frontend
+  namespace: cloudmart
+
 spec:
   replicas: 1
+
   selector:
     matchLabels:
       app: cloudmart-frontend
+
   template:
     metadata:
       labels:
         app: cloudmart-frontend
+
     spec:
       containers:
+
       - name: cloudmart-frontend
+
         image: ghcr.io/igordems/cloudmart-frontend:latest
+
+        imagePullPolicy: Always
+
         ports:
         - containerPort: 3000
-        # Змінюємо "build" на "." оскільки файли лежать в /app
-        command: ["npx", "serve", "-s", ".", "-l", "3000"]
+
+
         env:
-        - name: REACT_APP_API_URL
-          value: "http://api.192.168.1.240.sslip.io"
+#        - name: REACT_APP_API_URL
+#          value: "http://api.cloudmart.192.168.1.240.sslip.io"
+
+
+        command:
+        - npx
+        - serve
+        - -s
+        - .
+        - -l
+        - "3000"
