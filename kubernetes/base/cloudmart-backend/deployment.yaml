@@ -37,6 +37,7 @@ spec:
         - name: AWS_ENDPOINT_URL
           value: "http://localstack-service.default.svc.cluster.local:4566"
 
+
         # --- ІНТЕГРАЦІЯ З ЛОКАЛЬНИМ AI (OLLAMA / OPEN WEBUI) ---
         # Замість хмарного Bedrock перенаправляємо запити на локальний сервіс Ollama
         - name: BEDROCK_AGENT_ID
