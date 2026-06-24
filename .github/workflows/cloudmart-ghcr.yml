@@ -56,4 +56,4 @@ jobs:
           push: true
           tags: ghcr.io/igordems/cloudmart-${{ matrix.component }}:latest
           build-args: |
-            VITE_API_BASE_URL=http://api.cloudmart.192.168.1.240.sslip.io
+            VITE_API_BASE_URL=http://api.cloudmart.192.168.1.240.sslip.io/api
