@@ -45,7 +45,7 @@ jobs:
         docker push $IMAGE:$TAG
 
     - name: Install kustomize
-      uses: github-actions/setup-kustomize@v3
+      uses: kubernetes-sigs/setup-kustomize@v3
       with:
         kustomize-version: "5.4.2"
 
