@@ -4,11 +4,12 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'backend/**'
-      - 'frontend/**'
+      - 'source/backend/**'
+      - 'source/frontend/**'
+      - 'docker/backend/**'
+      - 'docker/frontend/**'
       - '.github/workflows/cloudmart-ghcr.yml'
   workflow_dispatch:
-
 
 env:
   REGISTRY: ghcr.io
