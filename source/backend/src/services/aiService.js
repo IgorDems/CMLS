@@ -4,9 +4,8 @@ import {
   InvokeAgentCommand,
 } from "@aws-sdk/client-bedrock-agent-runtime";
 import { Readable } from "stream";
-import pkg from "@smithy/eventstream-codec";
-
-const { EventStreamCodec } = pkg;
+//import pkg from "@smithy/eventstream-codec";
+//const { EventStreamCodec } = pkg;
 import dotenv from "dotenv";
 import { deleteOrder, getOrderById, cancelOrder } from "./orderService.js";
 
