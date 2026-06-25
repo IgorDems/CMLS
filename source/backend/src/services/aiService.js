@@ -83,77 +83,77 @@ export const sendOpenAIMessage = async (threadId, message) => {
     console.error("AI Service Error:", error);
     throw new Error("Не вдалося отримати відповідь від локальної моделі.");
   }
-}; 
+};
+//  const run = await openai.beta.threads.runs.create(threadId, {
+//    assistant_id: ASSISTANT_ID,
+//    tools: [
+//      { type: "function", function: deleteOrderFunction },
+//      { type: "function", function: cancelOrderFunction },
+//    ],
+//  });
+//
+//  let runStatus;
+//  do {
+//    await new Promise((resolve) => setTimeout(resolve, 1000));
+//    runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
 
-  const run = await openai.beta.threads.runs.create(threadId, {
-    assistant_id: ASSISTANT_ID,
-    tools: [
-      { type: "function", function: deleteOrderFunction },
-      { type: "function", function: cancelOrderFunction },
-    ],
-  });
+//    if (runStatus.status === "requires_action") {
+//      const toolCalls =
+//        runStatus.required_action.submit_tool_outputs.tool_calls;
+//      const toolOutputs = [];
 
-  let runStatus;
-  do {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+//      for (const toolCall of toolCalls) {
+//        const { orderId } = JSON.parse(toolCall.function.arguments);
+//        let result;
 
-    if (runStatus.status === "requires_action") {
-      const toolCalls =
-        runStatus.required_action.submit_tool_outputs.tool_calls;
-      const toolOutputs = [];
+//        try {
+//          const order = await getOrderById(orderId);
+//          if (!order) {
+//            result = `Order with ID ${orderId} does not exist.`;
+//          } else if (toolCall.function.name === "delete_order") {
+//            await deleteOrder(orderId);
+//            result = `Order ${orderId} has been successfully deleted.`;
+//          } else if (toolCall.function.name === "cancel_order") {
+//            const updatedOrder = await cancelOrder(orderId);
+//            result = `Order ${orderId} has been successfully canceled. New status: ${updatedOrder.status}`;
+//          }
+//        } catch (error) {
+//          console.error(`Error processing order ${orderId}:`, error);
+//          result = `An error occurred while processing the order: ${error.message}`;
+//        }
 
-      for (const toolCall of toolCalls) {
-        const { orderId } = JSON.parse(toolCall.function.arguments);
-        let result;
+//        toolOutputs.push({
+//          tool_call_id: toolCall.id,
+//          output: result,
+//        });
+//      }
 
-        try {
-          const order = await getOrderById(orderId);
-          if (!order) {
-            result = `Order with ID ${orderId} does not exist.`;
-          } else if (toolCall.function.name === "delete_order") {
-            await deleteOrder(orderId);
-            result = `Order ${orderId} has been successfully deleted.`;
-          } else if (toolCall.function.name === "cancel_order") {
-            const updatedOrder = await cancelOrder(orderId);
-            result = `Order ${orderId} has been successfully canceled. New status: ${updatedOrder.status}`;
-          }
-        } catch (error) {
-          console.error(`Error processing order ${orderId}:`, error);
-          result = `An error occurred while processing the order: ${error.message}`;
-        }
+//      if (toolOutputs.length > 0) {
+//        await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+//          tool_outputs: toolOutputs,
+//        });
+//      }
+//    }
+//  } while (runStatus.status !== "completed" && runStatus.status !== "failed");
 
-        toolOutputs.push({
-          tool_call_id: toolCall.id,
-          output: result,
-        });
-      }
-
-      if (toolOutputs.length > 0) {
-        await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
-          tool_outputs: toolOutputs,
-        });
-      }
-    }
-  } while (runStatus.status !== "completed" && runStatus.status !== "failed");
-
-  if (runStatus.status === "failed") {
-    console.error("Run failed:", runStatus.last_error);
-    throw new Error("Failed to process the message");
-  }
+//  if (runStatus.status === "failed") {
+//    console.error("Run failed:", runStatus.last_error);
+//    throw new Error("Failed to process the message");
+//  }
 
   // Retrieve the assistant's response
-  const messages = await openai.beta.threads.messages.list(threadId);
-  const assistantMessages = messages.data.filter(
-    (msg) => msg.role === "assistant"
-  );
+//  const messages = await openai.beta.threads.messages.list(threadId);
+//  const assistantMessages = messages.data.filter(
+//    (msg) => msg.role === "assistant"
+//  );
 
-  if (assistantMessages.length === 0) {
-    throw new Error("No response from assistant");
-  }
+//  if (assistantMessages.length === 0) {
+//    throw new Error("No response from assistant");
+//  }
 
-  return assistantMessages[0].content[0].text.value;
-};
+//  return assistantMessages[0].content[0].text.value;
+//};
+
 // Bedrock Functions
 
 export const createBedrockConversation = async () => {
