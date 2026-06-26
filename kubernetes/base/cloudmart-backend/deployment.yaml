@@ -35,7 +35,7 @@ spec:
           value: "test"
         # Використовуємо внутрішній DNS сервісу LocalStack у вашому кластері
         - name: AWS_ENDPOINT_URL
-          value: "http://localstack-service.default.svc.cluster.local:4566"
+          value: "http://localstack.default.svc.cluster.local:4566"
 
 
         # --- ІНТЕГРАЦІЯ З ЛОКАЛЬНИМ AI (OLLAMA / OPEN WEBUI) ---

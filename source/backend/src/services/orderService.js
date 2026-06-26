@@ -5,8 +5,10 @@ import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
+
 const dynamoDb = new DynamoDB.DocumentClient({
   region: process.env.AWS_REGION,
+  endpoint: process.env.AWS_ENDPOINT_URL,
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
