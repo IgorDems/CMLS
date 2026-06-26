@@ -53,12 +53,12 @@ export const getAllProducts = async () => {
   const result = await dynamoDb.scan(params).promise();
 
   return result.Items.map(item => ({
-    id: item.pk,
-    name: item.name || "",
-    description: item.description || "",
-    image: item.image || "",
-    price: item.price || 0
-  }));
+  id: item.pk,
+  name: item.name,
+  price: Number(item.price),
+  description: item.description || "",
+  image: item.image || ""
+}));
 };
 
 export const getProductById = async (id) => {

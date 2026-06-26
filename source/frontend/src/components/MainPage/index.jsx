@@ -14,14 +14,14 @@ const ProductCard = ({ product, onAddToCart }) => {
   const truncatedDescription =
     (product.description || "").length > 195
       ? (product.description || "").slice(0, 195) + "..."
-      : product.description;
+      : (product.description || "");
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-md flex flex-col justify-between h-full">
       <div>
         <img
-          src={product.image}
-          alt={product.name}
+          src={product.image  || "/placeholder.png"}
+          alt={product.name || ""}
           className="w-full h-48 object-contain mb-4"
         />
         <h3
@@ -82,7 +82,7 @@ const CloudMartMainPage = () => {
   };
 
   const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
