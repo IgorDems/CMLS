@@ -13,7 +13,7 @@ const dynamoDb = new DynamoDB.DocumentClient({
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
 
-const TABLE_NAME = 'cloudmart-orders';
+const TABLE_NAME = 'cloudmart_orders';
 
 export const createOrder = async (order) => {
   const params = {

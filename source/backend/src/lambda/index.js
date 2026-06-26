@@ -7,7 +7,7 @@ const docClient = DynamoDBDocumentClient.from(client);
 export const handler = async (event) => {
   console.log("Received event:", JSON.stringify(event, null, 2));
 
-  const tableName = "cloudmart-products";
+  const tableName = "cloudmart_products";
 
   try {
     let params = {

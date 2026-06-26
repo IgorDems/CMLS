@@ -20,7 +20,7 @@ const dynamoDb = new DynamoDB.DocumentClient({
 
 console.log("DocumentClient endpoint:", dynamoDb.service.endpoint.href);
 
-const TABLE_NAME = 'cloudmart-products';
+const TABLE_NAME = 'cloudmart_products';
 
 export const createProduct = async (product) => {
   const params = {
