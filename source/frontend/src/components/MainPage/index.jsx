@@ -9,11 +9,11 @@ import AIAssistant from "../AIAssistant";
 
 const ProductCard = ({ product, onAddToCart }) => {
   const truncatedTitle =
-    product.name.length > 60 ? product.name.slice(0, 60) + "..." : product.name;
+    (product.name || "").length > 60 ? (product.name || "").slice(0, 60) + "..." : (product.name || "");
 
   const truncatedDescription =
-    product.description.length > 195
-      ? product.description.slice(0, 195) + "..."
+    (product.description || "").length > 195
+      ? (product.description || "").slice(0, 195) + "..."
       : product.description;
 
   return (
