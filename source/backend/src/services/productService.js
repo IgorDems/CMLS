@@ -35,14 +35,30 @@ export const createProduct = async (product) => {
   return product;
 };
 
+//export const getAllProducts = async () => {
+//  const params = {
+//    TableName: TABLE_NAME
+//  }; 
+
+//  const result = await dynamoDb.scan(params).promise();
+
+//  return result.Items;
+//};
+
 export const getAllProducts = async () => {
   const params = {
     TableName: TABLE_NAME
-  }; 
+  };
 
   const result = await dynamoDb.scan(params).promise();
 
-  return result.Items;
+  return result.Items.map(item => ({
+    id: item.pk,
+    name: item.name || "",
+    description: item.description || "",
+    image: item.image || "",
+    price: item.price || 0
+  }));
 };
 
 export const getProductById = async (id) => {
