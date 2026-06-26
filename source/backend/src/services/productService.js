@@ -3,6 +3,12 @@ import pkg from 'aws-sdk';
 const { DynamoDB } = pkg;
 import dotenv from 'dotenv';
 dotenv.config();
+
+console.log("AWS_ENDPOINT_URL =", process.env.AWS_ENDPOINT_URL);
+console.log("AWS_ACCESS_KEY_ID =", process.env.AWS_ACCESS_KEY_ID);
+console.log("AWS_REGION =", process.env.AWS_REGION);
+
+
 import { v4 as uuidv4 } from 'uuid';
 
 const dynamoDb = new DynamoDB.DocumentClient({
@@ -11,6 +17,8 @@ const dynamoDb = new DynamoDB.DocumentClient({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
+
+console.log("DocumentClient endpoint:", dynamoDb.service.endpoint.href);
 
 const TABLE_NAME = 'cloudmart-products';
 
