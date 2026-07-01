@@ -23,27 +23,34 @@ console.log("DocumentClient endpoint:", dynamoDb.service.endpoint.href);
 const TABLE_NAME = 'cloudmart_products';
 
 
-export const createProduct = async (product) => {
-  const generatedId = uuidv4().split('-')[0];
-  const fullId = `PRODUCT#${generatedId}`;
+const { v4: uuidv4 } = require('uuid');
 
-  const params = {
-    TableName: TABLE_NAME,
-    Item: {
-      pk: 'PRODUCT',        // Partition Key (фіксований тип для каталогу)
-      sk: fullId,           // Sort Key (унікальний ідентифікатор товару)
-      id: fullId,           // Для сумісності з фронтендом
-      name: product.name,
-      price: Number(product.price),
-      description: product.description || "",
-      image: product.image || "",
-      createdAt: new Date().toISOString()
-    }
+async function createProduct(productData) {
+  const productId = uuidv4();
+  
+  const item = {
+    // Обов'язкові ключі для DynamoDB відповідно до вашого describe-table
+    pk: "PRODUCT",
+    sk: `PRODUCT#${productId}`,
+    
+    // Інші атрибути товару
+    id: productId, // для зворотної сумісності з фронтендом, якщо він очікує чистий id
+    name: productData.name,
+    price: productData.price,
+    description: productData.description,
+    image: productData.image
   };
 
-  await dynamoDb.put(params).promise();
-  return params.Item;
-};
+  const params = {
+    TableName: "cloudmart_products",
+    Item: item
+  };
+
+  // Виклик вашого DynamoDB клієнта (наприклад, за допомогою DocumentClient або @aws-sdk/client-dynamodb)
+  await dynamoDb.put(params).promise(); 
+  
+  return item;
+}
 
 export const deleteProduct = async (id) => {
   // Якщо з фронтенду приходить чистий ID без префіксу, а в базі він з PRODUCT#,
