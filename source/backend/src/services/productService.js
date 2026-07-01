@@ -23,16 +23,20 @@ console.log("DocumentClient endpoint:", dynamoDb.service.endpoint.href);
 const TABLE_NAME = 'cloudmart_products';
 
 export const createProduct = async (product) => {
+  const generatedId = uuidv4().split('-')[0];
+
   const params = {
     TableName: TABLE_NAME,
     Item: {
-      ...product,       
-      id:uuidv4().split('-')[0],
-      createdAt: new Date().toISOString()}
+      ...product,
+      pk: `PRODUCT#${generatedId}`, // Або просто generatedId, залежно від вашого формату (у вас у логах було PRODUCT#1, отже формат 'PRODUCT#ID')
+      id: generatedId,
+      createdAt: new Date().toISOString()
+    }
   };
 
   await dynamoDb.put(params).promise();
-  return product;
+  return { ...product, id: generatedId, pk: `PRODUCT#${generatedId}` };
 };
 
 //export const getAllProducts = async () => {
