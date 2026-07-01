@@ -22,16 +22,19 @@ console.log("DocumentClient endpoint:", dynamoDb.service.endpoint.href);
 
 const TABLE_NAME = 'cloudmart_products';
 
+
 export const createProduct = async (product) => {
   const generatedId = uuidv4().split('-')[0];
-  
+  const fullId = `PRODUCT#${generatedId}`;
+
   const params = {
     TableName: TABLE_NAME,
     Item: {
-      pk: `PRODUCT#${generatedId}`, // Перевірте, чи потрібен префікс "PRODUCT#" відповідно до логів вашої бази
-      id: generatedId,
+      pk: 'PRODUCT',        // Partition Key (фіксований тип для каталогу)
+      sk: fullId,           // Sort Key (унікальний ідентифікатор товару)
+      id: fullId,           // Для сумісності з фронтендом
       name: product.name,
-      price: Number(product.price), // Явно приводимо до числа, щоб уникнути ValidationException
+      price: Number(product.price),
       description: product.description || "",
       image: product.image || "",
       createdAt: new Date().toISOString()
@@ -40,6 +43,36 @@ export const createProduct = async (product) => {
 
   await dynamoDb.put(params).promise();
   return params.Item;
+};
+
+export const deleteProduct = async (id) => {
+  // Якщо з фронтенду приходить чистий ID без префіксу, а в базі він з PRODUCT#,
+  // робимо перевірку:
+  const fullId = id.startsWith('PRODUCT#') ? id : `PRODUCT#${id}`;
+
+  const params = {
+    TableName: TABLE_NAME,
+    Key: {
+      pk: 'PRODUCT', // Передаємо Partition Key
+      sk: fullId     // Передаємо Sort Key
+    }
+  };
+
+  await dynamoDb.delete(params).promise();
+};
+
+export const getProductById = async (id) => {
+  const fullId = id.startsWith('PRODUCT#') ? id : `PRODUCT#${id}`;
+  const params = {
+    TableName: TABLE_NAME,
+    Key: {
+      pk: 'PRODUCT',
+      sk: fullId
+    }
+  };
+
+  const result = await dynamoDb.get(params).promise();
+  return result.Item;
 };
 
 //export const getAllProducts = async () => {
@@ -68,15 +101,15 @@ export const getAllProducts = async () => {
 }));
 };
 
-export const getProductById = async (id) => {
-  const params = {
-    TableName: TABLE_NAME,
-    Key: {pk: id }
-  };
+//export const getProductById = async (id) => {
+//  const params = {
+//    TableName: TABLE_NAME,
+//    Key: {pk: id }
+//  };
 
-  const result = await dynamoDb.get(params).promise();
-  return result.Item;
-};
+//  const result = await dynamoDb.get(params).promise();
+//  return result.Item;
+//};
 
 export const updateProduct = async (id, updates) => {
   const params = {
