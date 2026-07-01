@@ -64,7 +64,7 @@ export const getAllProducts = async () => {
 export const getProductById = async (id) => {
   const params = {
     TableName: TABLE_NAME,
-    Key: { id }
+    Key: {pk: id }
   };
 
   const result = await dynamoDb.get(params).promise();
@@ -74,7 +74,7 @@ export const getProductById = async (id) => {
 export const updateProduct = async (id, updates) => {
   const params = {
     TableName: TABLE_NAME,
-    Key: { id },
+    Key: {pk: id },
     UpdateExpression: 'set #n = :n, price = :p, image = :i, description = :d',
     ExpressionAttributeNames: {
       '#n': 'name'
@@ -95,7 +95,7 @@ export const updateProduct = async (id, updates) => {
 export const deleteProduct = async (id) => {
   const params = {
     TableName: TABLE_NAME,
-    Key: { id }
+    Key: {pk: id }
   };
 
   await dynamoDb.delete(params).promise();
