@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: order-processor
-        image: ghcr.io/igordems/cloudmart-order-processor:latest
+        image: ghcr.io/igordems/cloudmart-order-processor:latest #have to be ta github
         command: ["python", "app.py"]
         workingDir: /app
         env:
