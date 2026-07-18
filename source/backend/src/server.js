@@ -6,6 +6,21 @@ import orderRoutes from "./routes/orderRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 
 import dotenv from "dotenv";
+
+import cors from 'cors';
+
+const corsOptions = {
+  origin: [
+    'http://cloudmart.192.168.1.240.sslip.io',
+    'http://localhost:3000'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+
 dotenv.config();
 
 const app = express();
