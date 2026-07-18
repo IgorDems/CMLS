@@ -23,7 +23,7 @@ console.log("DocumentClient endpoint:", dynamoDb.service.endpoint.href);
 const TABLE_NAME = 'cloudmart_products';
 
 
-const { v4: uuidv4 } = require('uuid');
+//const { v4: uuidv4 } = require('uuid');
 
 async function createProduct(productData) {
   const productId = uuidv4();
