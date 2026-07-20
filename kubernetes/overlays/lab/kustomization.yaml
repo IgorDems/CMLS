@@ -10,6 +10,7 @@ resources:
 - ../../base/localstack
 - ../../base/cloudmart-backend
 - ../../base/cloudmart-frontend
+- ../../base/order-processor
 
 images:
 - name: cloudmart-backend
@@ -21,3 +22,6 @@ images:
 - name: ghcr.io/igordems/agent-gateway
   newName: ghcr.io/igordems/agent-gateway
   newTag: d83b7c6ec9647a7c7384c311564b3d709e5c7683
+- name: order-processor # або оригінальне ім'я з base
+  newName: ghcr.io/igordems/cloudmart-order-processor
+  newTag: latest
