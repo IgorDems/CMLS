@@ -24,18 +24,19 @@ spec:
             - name: AWS_DEFAULT_REGION
               value: "us-east-1"
           volumeMounts:
-            # 1. Монтуємо ваш існуючий PVC для зберігання даних на диску
+            # 1. Монтування PVC для даних
             - name: localstack-data
               mountPath: /var/lib/localstack
-            # 2. Монтуємо ініціалізаційний скрипт у папку ready.d
+            # 2. Монтування безпосередньо файлу init-aws.sh у папку ready.d
             - name: init-scripts
-              mountPath: /etc/localstack/init/ready.d
+              mountPath: /etc/localstack/init/ready.d/init-aws.sh
+              subPath: init-aws.sh
       volumes:
-        # 1. Ваш існуючий PVC
+        # 1. Ваше PVC
         - name: localstack-data
           persistentVolumeClaim:
             claimName: localstack-pvc
-        # 2. ConfigMap зі скриптом (використовуємо існуючий або новий ConfigMap)
+        # 2. ConfigMap з ініціалізаційним скриптом
         - name: init-scripts
           configMap:
             name: localstack-init-script
