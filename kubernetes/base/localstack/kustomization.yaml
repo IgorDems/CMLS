@@ -6,3 +6,4 @@ resources:
   - localstack-init-configmap.yaml
 #  - seed-products-job.yaml
   - ingress.yaml
+  - init-aws-script.yaml

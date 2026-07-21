@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+    spec:
+      containers:
+        - name: localstack
+          image: localstack/localstack:3.6
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4566
+          env:
+            - name: SERVICES
+              value: "s3,dynamodb,sqs,sns,iam,sts,lambda,apigateway,ec2,cloudwatch,route53,secretsmanager"
+            - name: LS_LOG
+              value: "info"
+            # --- НОВИЙ ПАРАМЕТР ДЛЯ ПЕРСИСТЕНТНОСТІ ---
+            - name: PERSISTENCE
+              value: "1"
+          volumeMounts:
+            - name: localstack-init
+              mountPath: /etc/localstack/init/ready.d/10-bootstrap.sh
+              subPath: 10-bootstrap.sh
+            # --- НОВЕ МОНТУВАННЯ ДИСКА ДЛЯ ДАНИХ ---
+            - name: localstack-data
+              mountPath: /var/lib/localstack
+      volumes:
+        - name: localstack-init
+          configMap:
+            name: localstack-init
+            defaultMode: 0755
+        # --- НОВИЙ БЛОК ПІДКЛЮЧЕННЯ PVC ДИСКА ---
+        - name: localstack-data
+          persistentVolumeClaim:
+            claimName: localstack-pvc

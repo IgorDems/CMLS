@@ -15,31 +15,28 @@ spec:
     spec:
       containers:
         - name: localstack
-          image: localstack/localstack:3.6
-          imagePullPolicy: IfNotPresent
+          image: localstack/localstack:latest
           ports:
             - containerPort: 4566
           env:
-            - name: SERVICES
-              value: "s3,dynamodb,sqs,sns,iam,sts,lambda,apigateway,ec2,cloudwatch,route53,secretsmanager"
-            - name: LS_LOG
-              value: "info"
-            # --- НОВИЙ ПАРАМЕТР ДЛЯ ПЕРСИСТЕНТНОСТІ ---
             - name: PERSISTENCE
               value: "1"
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
           volumeMounts:
-            - name: localstack-init
-              mountPath: /etc/localstack/init/ready.d/10-bootstrap.sh
-              subPath: 10-bootstrap.sh
-            # --- НОВЕ МОНТУВАННЯ ДИСКА ДЛЯ ДАНИХ ---
+            # 1. Монтуємо ваш існуючий PVC для зберігання даних на диску
             - name: localstack-data
               mountPath: /var/lib/localstack
+            # 2. Монтуємо ініціалізаційний скрипт у папку ready.d
+            - name: init-scripts
+              mountPath: /etc/localstack/init/ready.d
       volumes:
-        - name: localstack-init
-          configMap:
-            name: localstack-init
-            defaultMode: 0755
-        # --- НОВИЙ БЛОК ПІДКЛЮЧЕННЯ PVC ДИСКА ---
+        # 1. Ваш існуючий PVC
         - name: localstack-data
           persistentVolumeClaim:
             claimName: localstack-pvc
+        # 2. ConfigMap зі скриптом (використовуємо існуючий або новий ConfigMap)
+        - name: init-scripts
+          configMap:
+            name: localstack-init-script
+            defaultMode: 0755
