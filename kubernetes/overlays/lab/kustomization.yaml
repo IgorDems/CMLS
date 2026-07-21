@@ -7,7 +7,7 @@ resources:
 - ../../base/ai-stack
 - ../../base/agent-gateway
 - ../../base/monitoring
-- ../../base/localstack
+#- ../../base/localstack
 - ../../base/cloudmart-backend
 - ../../base/cloudmart-frontend
 - ../../base/order-processor
