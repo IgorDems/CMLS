@@ -17,7 +17,7 @@ from config import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("order-processor")
 
-# --- AWS clients ---
+ # --- AWS clients ---
 sqs = boto3.client(
     "sqs",
     region_name=AWS_REGION,

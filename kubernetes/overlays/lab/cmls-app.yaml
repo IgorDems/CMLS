@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cmls-app
+  namespace: argocd
+  annotations:
+    # Опитуємо GHCR на наявність нових збірок образу
+    argocd-image-updater.argoproj.io/image-list: order-processor=ghcr.io/igordems/cloudmart-order-processor:latest
+    # Стратегія 'digest' стежить за унікальними хешами (SHA) образу
+    argocd-image-updater.argoproj.io/order-processor.update-strategy: digest
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/IgorDems/CMLS.git'
+    targetRevision: main
+    path: kubernetes/overlays/lab
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cloudmart
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

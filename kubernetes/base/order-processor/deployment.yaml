@@ -17,6 +17,7 @@ spec:
       - name: order-processor
         image: ghcr.io/igordems/cloudmart-order-processor:latest #have to be ta github
         command: ["python", "app.py"]
+#        imagePullPolicy: Always
         workingDir: /app
         env:
         - name: AWS_REGION
