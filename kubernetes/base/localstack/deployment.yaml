@@ -15,28 +15,33 @@ spec:
     spec:
       containers:
         - name: localstack
-          image: localstack/localstack:latest
+          # Використовуємо вашу перевірену сумісну версію 3.6.0
+          image: localstack/localstack:3.6.0
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4566
           env:
+            # Чіткий перелік необхідних сервісів для CloudMart
+            - name: SERVICES
+              value: "s3,dynamodb,sqs,sns,iam,sts,lambda,apigateway,ec2,cloudwatch,route53,secretsmanager"
+            - name: LS_LOG
+              value: "info"
             - name: PERSISTENCE
               value: "1"
             - name: AWS_DEFAULT_REGION
               value: "us-east-1"
           volumeMounts:
-            # 1. Монтування PVC для даних
+            # 1. Сховище даних на хості aorus
             - name: localstack-data
               mountPath: /var/lib/localstack
-            # 2. Монтування безпосередньо файлу init-aws.sh у папку ready.d
+            # 2. Ваш скрипт авто-ініціалізації таблиць та бакетів
             - name: init-scripts
               mountPath: /etc/localstack/init/ready.d/init-aws.sh
               subPath: init-aws.sh
       volumes:
-        # 1. Ваше PVC
         - name: localstack-data
           persistentVolumeClaim:
             claimName: localstack-pvc
-        # 2. ConfigMap з ініціалізаційним скриптом
         - name: init-scripts
           configMap:
             name: localstack-init-script
