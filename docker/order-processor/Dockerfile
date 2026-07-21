@@ -1,12 +1,12 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Копіюємо requirements та встановлюємо залежності
+# Копіюємо файл залежностей та встановлюємо їх
 COPY services/order-processor/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копіюємо вихідний код з папки services/order-processor
+# Копіюємо вихідний код додатка
 COPY services/order-processor/ .
 
 CMD ["python", "app.py"]
