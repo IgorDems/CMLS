@@ -13,8 +13,10 @@ dotenv.config();
 // ==========================================
 // 1. Google Gemini AI Integration (GCP)
 // ==========================================
-// GoogleGenAI автоматично використовує process.env.GEMINI_API_KEY
-const ai = new GoogleGenAI();
+// Передаємо об'єкт конфігурації з API-ключем
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || "dummy-key",
+});
 
 /**
  * Генерує опис товару та SEO-теги за допомогою Google Gemini API
@@ -52,8 +54,8 @@ const bedrockAgentClient = new BedrockAgentRuntimeClient({
 });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "ollama", // Ollama ігнорує ключ, але бібліотека його вимагає
-  baseURL: process.env.OPENAI_BASE_URL || "http://localhost:11434/v1", // Шлях до Ollama
+  apiKey: process.env.OPENAI_API_KEY || "ollama",
+  baseURL: process.env.OPENAI_BASE_URL || "http://localhost:11434/v1",
 });
 
 const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
@@ -113,7 +115,7 @@ export const sendOpenAIMessage = async (threadId, message) => {
 // 3. AWS Bedrock Agent Functions
 // ==========================================
 export const createBedrockConversation = async () => {
-  return Date.now().toString(); // Simple session ID for now
+  return Date.now().toString();
 };
 
 export const sendBedrockMessage = async (sessionId, message) => {
@@ -189,5 +191,5 @@ export const sendBedrockMessage = async (sessionId, message) => {
 };
 
 export async function populateProductsTable() {
-  // Implementation to populate the DynamoDB table with sample data
+  // Implementation to populate the DynamoDB table
 }
