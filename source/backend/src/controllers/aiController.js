@@ -1,6 +1,6 @@
 import * as aiService from "../services/aiService.js";
 
-// --- Google Gemini Controller ---
+// --- GCP Gemini Controller ---
 export const generateProductDetailsController = async (req, res) => {
   try {
     const { name, category } = req.body;
@@ -27,7 +27,7 @@ export const generateProductDetailsController = async (req, res) => {
   }
 };
 
-// --- OpenAI / Local LLM Controllers ---
+// --- Local LLM / OpenAI Controllers ---
 export const startOpenAIConversationController = async (req, res) => {
   try {
     const threadId = await aiService.createOpenAIConversation();
