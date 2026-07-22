@@ -30,9 +30,9 @@ export async function generateProductDetails(productName, category = "General") 
   "tags": ["тег1", "тег2", "тег3", "тег4", "тег5"]
 }`;
 
-    // Використовуємо канонічну назву моделі для SDK @google/genai
+    // Використовуємо актуальну та стабільну модель gemini-2.0-flash-lite
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash-lite",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
