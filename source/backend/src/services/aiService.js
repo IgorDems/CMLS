@@ -13,7 +13,6 @@ dotenv.config();
 // ==========================================
 // 1. Google Gemini AI Integration (GCP)
 // ==========================================
-// Передаємо об'єкт конфігурації з API-ключем
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || "dummy-key",
 });
@@ -32,7 +31,7 @@ export async function generateProductDetails(productName, category = "General") 
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
