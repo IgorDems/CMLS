@@ -31,7 +31,7 @@ export async function generateProductDetails(productName, category = "General") 
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
