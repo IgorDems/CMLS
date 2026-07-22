@@ -45,11 +45,13 @@ export const sendOpenAIMessageController = async (req, res) => {
       return res.status(400).json({ error: "Message is required" });
     }
 
-    // Відправляємо запит до Gemini замість Ollama
     const aiResponse = await aiService.sendGeminiChatMessage(message);
 
-    // Повертаємо відповідь фронтенду
-    res.json({ response: aiResponse });
+    // Передаємо відповідь у двох форматах для покриття будь-яких очікувань Axios/React
+    res.json({
+      response: aiResponse,
+      message: aiResponse,
+    });
   } catch (error) {
     console.error("Error sending message to Gemini Chat:", error);
     res.status(500).json({ error: "Error processing message", details: error.message });
