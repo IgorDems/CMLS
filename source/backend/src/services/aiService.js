@@ -30,9 +30,9 @@ export async function generateProductDetails(productName, category = "General") 
   "tags": ["тег1", "тег2", "тег3", "тег4", "тег5"]
 }`;
 
-    // Використовуємо актуальну та стабільну модель gemini-2.0-flash-lite
+    // Стабільна модель із гарантованим Free Tier
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
