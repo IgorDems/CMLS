@@ -17,7 +17,7 @@
     "@aws-sdk/client-dynamodb": "^3.649.0",
     "@aws-sdk/eventstream-marshaller": "^3.120.0",
     "@aws-sdk/util-utf8-node": "^3.259.0",
-    "@google/genai": "^0.1.1",
+    "@google/genai": "latest",
     "aws-sdk": "^2.1691.0",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
