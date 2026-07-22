@@ -1,59 +1,25 @@
-import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import {
   BedrockAgentRuntimeClient,
   InvokeAgentCommand,
 } from "@aws-sdk/client-bedrock-agent-runtime";
 import { Readable } from "stream";
+//import pkg from "@smithy/eventstream-codec";
+//const { EventStreamCodec } = pkg;
 import dotenv from "dotenv";
 import { deleteOrder, getOrderById, cancelOrder } from "./orderService.js";
 
 dotenv.config();
 
-// ==========================================
-// 1. Google Gemini AI Integration (GCP)
-// ==========================================
-// GoogleGenAI автоматично використовує process.env.GEMINI_API_KEY
-const ai = new GoogleGenAI();
-
-/**
- * Генерує опис товару та SEO-теги за допомогою Google Gemini API
- */
-export async function generateProductDetails(productName, category = "General") {
-  try {
-    const prompt = `Ти помічник інтернет-магазину CloudMart. 
-Згенеруй короткий привабливий опис українською мовою для товару "${productName}" у категорії "${category}", а також 5 тегів.
-Поверни результат ТІЛЬКИ у форматі JSON:
-{
-  "description": "текст опису",
-  "tags": ["тег1", "тег2", "тег3", "тег4", "тег5"]
-}`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    return JSON.parse(response.text);
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw new Error(`Failed to generate product AI details: ${error.message}`);
-  }
-}
-
-// ==========================================
-// 2. Local LLM / OpenAI Integration (Ollama)
-// ==========================================
 const bedrockAgentClient = new BedrockAgentRuntimeClient({
   region: "us-east-1",
 });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "ollama", // Ollama ігнорує ключ, але бібліотека його вимагає
-  baseURL: process.env.OPENAI_BASE_URL || "http://localhost:11434/v1", // Шлях до Ollama
+//  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || 'ollama', // Ollama ігнорує ключ, але бібліотека його вимагає
+  baseURL: process.env.OPENAI_BASE_URL || 'http://localhost:11434/v1', // Додаємо шлях до Ollama
+
 });
 
 const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
@@ -90,15 +56,24 @@ const cancelOrderFunction = {
   },
 };
 
+// OpenAI Functions
+
 export const createOpenAIConversation = async () => {
   const thread = await openai.beta.threads.create();
   return thread.id;
 };
 
+//export const sendOpenAIMessage = async (threadId, message) => {
+//  await openai.beta.threads.messages.create(threadId, {
+//    role: "user",
+//    content: message,
+//  });
+
+
 export const sendOpenAIMessage = async (threadId, message) => {
   try {
     const response = await openai.chat.completions.create({
-      model: process.env.LLM_MODEL || "llama3",
+      model: process.env.LLM_MODEL || "llama3", // використовуємо змінну з вашого Deployment
       messages: [{ role: "user", content: message }],
     });
 
@@ -108,14 +83,81 @@ export const sendOpenAIMessage = async (threadId, message) => {
     throw new Error("Не вдалося отримати відповідь від локальної моделі.");
   }
 };
+//  const run = await openai.beta.threads.runs.create(threadId, {
+//    assistant_id: ASSISTANT_ID,
+//    tools: [
+//      { type: "function", function: deleteOrderFunction },
+//      { type: "function", function: cancelOrderFunction },
+//    ],
+//  });
+//
+//  let runStatus;
+//  do {
+//    await new Promise((resolve) => setTimeout(resolve, 1000));
+//    runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
 
-// ==========================================
-// 3. AWS Bedrock Agent Functions
-// ==========================================
+//    if (runStatus.status === "requires_action") {
+//      const toolCalls =
+//        runStatus.required_action.submit_tool_outputs.tool_calls;
+//      const toolOutputs = [];
+
+//      for (const toolCall of toolCalls) {
+//        const { orderId } = JSON.parse(toolCall.function.arguments);
+//        let result;
+
+//        try {
+//          const order = await getOrderById(orderId);
+//          if (!order) {
+//            result = `Order with ID ${orderId} does not exist.`;
+//          } else if (toolCall.function.name === "delete_order") {
+//            await deleteOrder(orderId);
+//            result = `Order ${orderId} has been successfully deleted.`;
+//          } else if (toolCall.function.name === "cancel_order") {
+//            const updatedOrder = await cancelOrder(orderId);
+//            result = `Order ${orderId} has been successfully canceled. New status: ${updatedOrder.status}`;
+//          }
+//        } catch (error) {
+//          console.error(`Error processing order ${orderId}:`, error);
+//          result = `An error occurred while processing the order: ${error.message}`;
+//        }
+
+//        toolOutputs.push({
+//          tool_call_id: toolCall.id,
+//          output: result,
+//        });
+//      }
+
+//      if (toolOutputs.length > 0) {
+//        await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+//          tool_outputs: toolOutputs,
+//        });
+//      }
+//    }
+//  } while (runStatus.status !== "completed" && runStatus.status !== "failed");
+
+//  if (runStatus.status === "failed") {
+//    console.error("Run failed:", runStatus.last_error);
+//    throw new Error("Failed to process the message");
+//  }
+
+  // Retrieve the assistant's response
+//  const messages = await openai.beta.threads.messages.list(threadId);
+//  const assistantMessages = messages.data.filter(
+//    (msg) => msg.role === "assistant"
+//  );
+
+//  if (assistantMessages.length === 0) {
+//    throw new Error("No response from assistant");
+//  }
+
+//  return assistantMessages[0].content[0].text.value;
+//};
+
+// Bedrock Functions
+
 export const createBedrockConversation = async () => {
   return Date.now().toString(); // Simple session ID for now
 };
-
 export const sendBedrockMessage = async (sessionId, message) => {
   const params = {
     agentId: AGENT_ID,
@@ -146,6 +188,7 @@ export const sendBedrockMessage = async (sessionId, message) => {
       return "I'm sorry, but I couldn't generate a response at the moment. Please try again later.";
     }
 
+    // Process the messageStream
     const messageStream = response.completion.options.messageStream;
     const stream = Readable.from(messageStream);
 
@@ -154,6 +197,7 @@ export const sendBedrockMessage = async (sessionId, message) => {
       console.log("Raw chunk:", JSON.stringify(chunk, null, 2));
 
       if (chunk && typeof chunk === "object" && chunk.body) {
+        // Convert the body object to a Buffer
         const bodyBuffer = Buffer.from(Object.values(chunk.body));
         const bodyString = bodyBuffer.toString("utf-8");
 
@@ -190,4 +234,5 @@ export const sendBedrockMessage = async (sessionId, message) => {
 
 export async function populateProductsTable() {
   // Implementation to populate the DynamoDB table with sample data
+  // This would be similar to what was in the PopulateProductsTableFunction
 }

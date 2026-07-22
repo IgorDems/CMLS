@@ -1,5 +1,33 @@
 import * as aiService from "../services/aiService.js";
 
+// --- Google Gemini Controller ---
+export const generateProductDetailsController = async (req, res) => {
+  try {
+    const { name, category } = req.body;
+
+    if (!name) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Product name is required" });
+    }
+
+    const result = await aiService.generateProductDetails(name, category || "General");
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error generating product details with Gemini:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error generating product details",
+      details: error.message,
+    });
+  }
+};
+
+// --- OpenAI / Local LLM Controllers ---
 export const startOpenAIConversationController = async (req, res) => {
   try {
     const threadId = await aiService.createOpenAIConversation();
@@ -30,6 +58,7 @@ export const sendOpenAIMessageController = async (req, res) => {
   }
 };
 
+// --- Bedrock Controllers ---
 export const startBedrockConversationController = async (req, res) => {
   try {
     const conversationId = await aiService.createBedrockConversation();

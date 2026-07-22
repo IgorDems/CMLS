@@ -1,6 +1,7 @@
 // routes/aiRoutes.js
 import express from "express";
 import {
+  generateProductDetailsController,
   startOpenAIConversationController,
   sendOpenAIMessageController,
   startBedrockConversationController,
@@ -8,6 +9,9 @@ import {
 } from "../controllers/aiController.js";
 
 const router = express.Router();
+
+// GCP Gemini route
+router.post("/generate-product", generateProductDetailsController);
 
 // OpenAI routes
 router.post("/start", startOpenAIConversationController);
