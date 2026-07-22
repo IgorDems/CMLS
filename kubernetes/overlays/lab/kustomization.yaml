@@ -21,7 +21,7 @@ images:
   newTag: latest
 - name: ghcr.io/igordems/agent-gateway
   newName: ghcr.io/igordems/agent-gateway
-  newTag: f45d3dfd4c9562cc50b06a1e8c6204e43a86e5c5
+  newTag: 3ac67e718026a49792fab9c2da2aa11bb1f0d898
 - name: order-processor
   newName: ghcr.io/igordems/cloudmart-order-processor
   newTag: latest
