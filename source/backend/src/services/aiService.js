@@ -3,11 +3,50 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
+// Список моделей у порядку пріоритету (AVR / Fallback chain)
+const ENDPOINTS = [
+  "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent",
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+];
+
+/**
+ * Універсальний запит із підтримкою Автоматичного Введення Резерву (AVR)
+ */
+async function callGeminiWithFallback(bodyPayload) {
+  let lastError = null;
+
+  for (const url of ENDPOINTS) {
+    try {
+      const response = await fetch(`${url}?key=${GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyPayload)
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+        return data.candidates[0].content.parts[0].text;
+      }
+      
+      console.warn(`[AVR Notice] Endpoint ${url} failed with status ${response.status}. Trying next fallback...`);
+      lastError = data;
+    } catch (err) {
+      console.warn(`[AVR Notice] Network failed for ${url}. Trying next fallback...`);
+      lastError = err;
+    }
+  }
+
+  throw new Error(`All Gemini endpoints failed. Last response: ${JSON.stringify(lastError)}`);
+}
+
+/**
+ * Генерація опису товару
+ */
 export async function generateProductDetails(productName, category = "General") {
-  try {
-    const prompt = `Ти помічник інтернет-магазину CloudMart. 
+  const prompt = `Ти помічник інтернет-магазину CloudMart. 
 Згенеруй короткий привабливий опис українською мовою для товару "${productName}" у категорії "${category}", а також 5 тегів.
 Поверни результат ТІЛЬКИ у форматі JSON:
 {
@@ -15,53 +54,38 @@ export async function generateProductDetails(productName, category = "General") 
   "tags": ["тег1", "тег2", "тег3", "тег4", "тег5"]
 }`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json" }
-      })
+  try {
+    const textResponse = await callGeminiWithFallback({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json" }
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(JSON.stringify(data));
-    }
-
-    const textResponse = data.candidates[0].content.parts[0].text;
     return JSON.parse(textResponse);
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw new Error(`Failed to generate product AI details: ${error.message}`);
+    console.error("Gemini API Emergency Fallback Triggered:", error);
+    // AVR Захист: повертаємо базовий дефолтний JSON, щоб додаток НЕ впав
+    return {
+      description: `Якісний товар "${productName}" у категорії ${category}. Опис тимчасово згенеровано в аварійному режимі.`,
+      tags: ["cloudmart", "товар", "новинка", "акція", "якість"]
+    };
   }
 }
 
+/**
+ * Чат підтримки клієнтів (Customer Support)
+ */
 export async function sendGeminiChatMessage(message) {
-  try {
-    const prompt = `Ти ввічливий та корисний асистент підтримки клієнтів інтернет-магазину CloudMart.
+  const prompt = `Ти ввічливий та корисний асистент підтримки клієнтів інтернет-магазину CloudMart.
 Дай коротку, чітку та привітну відповідь українською мовою на запитання клієнта:
 "${message}"`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
+  try {
+    return await callGeminiWithFallback({
+      contents: [{ parts: [{ text: prompt }] }]
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(JSON.stringify(data));
-    }
-
-    return data.candidates[0].content.parts[0].text;
   } catch (error) {
-    console.error("Gemini Customer Support Chat Error:", error);
-    throw new Error(`Customer Support AI Error: ${error.message}`);
+    console.error("Gemini Chat Emergency Fallback Triggered:", error);
+    // AVR Захист: повертаємо аварійну відповідь клієнту замість 500 Internal Server Error
+    return "Вітаю! Наразі наш онлайн-асистент перебуває на плановому обслуговуванні. Ваш запит прийнято, наш оператор зв'яжеться з вами найближчим часом!";
   }
 }
 
