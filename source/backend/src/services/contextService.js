@@ -1,7 +1,7 @@
 import { getAllProducts } from "./productService.js";
 
 /**
- * Формує системний промпт із актуальними даними з DynamoDB
+ * Формує системний промпт із актуальним контекстом товарів з DynamoDB
  */
 export async function buildStoreContextPrompt(userMessage) {
   let catalogContext = "Каталог порожній.";
@@ -10,7 +10,7 @@ export async function buildStoreContextPrompt(userMessage) {
     const products = await getAllProducts();
     if (products && products.length > 0) {
       catalogContext = products.map(p => 
-        `- [ID: ${p.id}] Назва: ${p.name} | Категорія: ${p.category || 'Загальна'} | Ціна: $${p.price} | Опис: ${p.description || 'Немає'} | В наявності: ${p.stock ?? 'Так'}`
+        `- Назва: ${p.name} | Категорія: ${p.category || 'Загальна'} | Ціна: $${p.price} | Опис: ${p.description || 'Немає'} | В наявності: ${p.stock ?? 'Так'}`
       ).join("\n");
     }
   } catch (error) {
@@ -18,13 +18,13 @@ export async function buildStoreContextPrompt(userMessage) {
   }
 
   return `Ти — офіційний AI-консультант інтернет-магазину CloudMart.
-Твоє завдання — відповідати покупцям СТРОГО на основі каталогу товарів CloudMart.
+Твоє завдання — відповідати покупцям СТРОГО на основі наведеного нижче каталогу товарів CloudMart.
 
-АКТУАЛЬНИЙ КАТАЛОГ ТОВАРІВ МАЗИНУ:
+КАТАЛОГ ТОВАРІВ CLOUDMART:
 ${catalogContext}
 
 ПРАВИЛА ВІДПОВІДІ:
-1. Відповідай ТІЛЬКИ про товари, які є у наведеному вище каталозі.
+1. Відповідай ТІЛЬКИ про товари, які присутні у наведеному вище каталозі.
 2. Якщо товару немає в каталозі, ввічливо повідом, що такий товар відсутній у CloudMart.
 3. Не вигадуй ціни, товари чи характеристики, яких немає в наданому списку.
 4. Відповідай дружньо, стисло та українською мовою.
