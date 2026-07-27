@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import { buildStoreContextPrompt } from "./contextService.js";
 
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3.5:27b";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://ollama-service.cloudmart.svc.cluster.local:11434/api/generate";
 const TIMEOUT_MS = 4000; // 4 секунди на відповідь Gemini перед переключенням на Ollama
@@ -109,9 +110,10 @@ async function callOllamaAPI(prompt) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "mistral",
+      model: OLLAMA_MODEL,
       prompt: prompt,
-      stream: false
+      stream: false,
+      keep_alive: "24h" // Тримає модель гарячою у VRAM RTX 3090
     })
   });
 
