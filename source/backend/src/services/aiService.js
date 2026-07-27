@@ -3,41 +3,40 @@ import { buildStoreContextPrompt } from "./contextService.js";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://ollama-service.cloudmart.svc.cluster.local:11434/api/generate";
-const TIMEOUT_MS = 4000; // 4 секунди очікування Gemini перед переключенням на Ollama
+const TIMEOUT_MS = 4000; // 4 second timeout before falling back to Ollama
 
 /**
- * Створення нової сесії чату для фронтенду (замість OpenAI threads)
+ * Creates a new chat session thread for the frontend
  */
 export async function createOpenAIConversation() {
-  // Фронтенд очікує ідентифікатор треду (threadId)
   const threadId = `thread_local_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   return threadId;
 }
 
 /**
- * Чат-асистент із гібридною логікою Gemini -> Fallback на Ollama
+ * Chat Assistant handler with Gemini -> Ollama Fallback
  */
 export async function sendGeminiChatMessage(message) {
   const fullPrompt = await buildStoreContextPrompt(message);
 
-  // Спроба #1: Виклик Google Gemini з тайм-аутом
+  // Attempt #1: Google Gemini API
   try {
     return await callWithTimeout(callGeminiAPI(fullPrompt), TIMEOUT_MS);
   } catch (geminiError) {
-    console.warn(`[AI Hybrid Notice] Gemini недоступний (${geminiError.message}). Автопереключення на локальну Ollama...`);
+    console.warn(`[AI Hybrid Notice] Gemini unavailable (${geminiError.message}). Falling back to local Ollama...`);
     
-    // Спроба #2: Резервний виклик локальної Ollama
+    // Attempt #2: Local Ollama Fallback
     try {
       return await callOllamaAPI(fullPrompt);
     } catch (ollamaError) {
-      console.error("[AI Critical Error] Обидва AI-провайдери недоступні:", ollamaError.message);
+      console.error("[AI Critical Error] Both AI providers failed:", ollamaError.message);
       return "Вибачте, сервіс штучного інтелекту тимчасово недоступний.";
     }
   }
 }
 
 /**
- * Генерація деталей товару для адмінки (Gemini -> Fallback на Ollama)
+ * Admin Product Details Generator
  */
 export async function generateProductDetails(productName, category = "General") {
   const prompt = `Згенеруй короткий опис та 5 тегів для товару "${productName}" у категорії "${category}". Відповідь надай строго у форматі JSON з полями "description" та "tags" (масив рядків).`;
@@ -46,7 +45,7 @@ export async function generateProductDetails(productName, category = "General") 
   try {
     rawResponse = await callWithTimeout(callGeminiAPI(prompt), TIMEOUT_MS);
   } catch (error) {
-    console.warn(`[AI Hybrid Notice] Gemini fallback для генерації продукту: ${error.message}`);
+    console.warn(`[AI Hybrid Notice] Gemini fallback for product generation: ${error.message}`);
     try {
       rawResponse = await callOllamaAPI(prompt);
     } catch (ollamaErr) {
@@ -72,7 +71,7 @@ export async function generateProductDetails(productName, category = "General") 
 }
 
 // ----------------------------------------------------------------------------
-// Допоміжні функції-провайдери
+// Helper Provider Functions
 // ----------------------------------------------------------------------------
 
 function callWithTimeout(promise, ms) {

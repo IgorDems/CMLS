@@ -1,7 +1,7 @@
 import { getAllProducts } from "./productService.js";
 
 /**
- * Формує системний промпт із актуальним контекстом товарів з DynamoDB
+ * Builds system prompt dynamically using active DynamoDB products
  */
 export async function buildStoreContextPrompt(userMessage) {
   let catalogContext = "Каталог порожній.";
@@ -14,7 +14,7 @@ export async function buildStoreContextPrompt(userMessage) {
       ).join("\n");
     }
   } catch (error) {
-    console.error("[ContextService] Помилка завантаження товарів з DynamoDB:", error.message);
+    console.error("[ContextService] Error fetching products from DynamoDB:", error.message);
   }
 
   return `Ти — офіційний AI-консультант інтернет-магазину CloudMart.
