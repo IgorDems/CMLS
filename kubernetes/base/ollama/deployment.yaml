@@ -13,7 +13,7 @@ spec:
       labels:
         app: ollama
     spec:
-      runtimeClassName: nvidia   # <--- ЦЕЙ РЯДОК ПРИМУСОВО ВМИКАЄ NVIDIA RUNTIME
+      runtimeClassName: nvidia   # <--- КЛЮЧОВИЙ РЯДОК (Вказує K3s використовувати nvidia runtime)
       nodeSelector:
         kubernetes.io/hostname: aorus
       containers:
@@ -35,9 +35,16 @@ spec:
             nvidia.com/gpu: "1"
           requests:
             nvidia.com/gpu: "1"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
         volumeMounts:
         - mountPath: /root/.ollama
           name: host-ollama-root
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
       volumes:
       - hostPath:
           path: /mnt/data/.ollama
