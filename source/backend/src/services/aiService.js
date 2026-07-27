@@ -3,7 +3,16 @@ import { buildStoreContextPrompt } from "./contextService.js";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://ollama-service.cloudmart.svc.cluster.local:11434/api/generate";
-const TIMEOUT_MS = 4000; // 4 секунди чекаємо Gemini, далі переходимо на Ollama
+const TIMEOUT_MS = 4000; // 4 секунди очікування Gemini перед переключенням на Ollama
+
+/**
+ * Створення нової сесії чату для фронтенду (замість OpenAI threads)
+ */
+export async function createOpenAIConversation() {
+  // Фронтенд очікує ідентифікатор треду (threadId)
+  const threadId = `thread_local_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  return threadId;
+}
 
 /**
  * Чат-асистент із гібридною логікою Gemini -> Fallback на Ollama
@@ -15,7 +24,7 @@ export async function sendGeminiChatMessage(message) {
   try {
     return await callWithTimeout(callGeminiAPI(fullPrompt), TIMEOUT_MS);
   } catch (geminiError) {
-    console.warn(`[AI Hybrid Notice] Gemini недоступний або дав помилку: (${geminiError.message}). Автопереключення на локальну Ollama...`);
+    console.warn(`[AI Hybrid Notice] Gemini недоступний (${geminiError.message}). Автопереключення на локальну Ollama...`);
     
     // Спроба #2: Резервний виклик локальної Ollama
     try {
