@@ -1,67 +1,124 @@
 import fetch from "node-fetch";
+import { buildStoreContextPrompt } from "./contextService.js";
 
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://ollama-service.cloudmart.svc.cluster.local:11434/api/generate";
+const TIMEOUT_MS = 4000; // 4 секунди на відповідь Gemini перед переключенням на Ollama
 
-// Єдине доповнення: генеруємо dummy-ID для сесії фронтенду, щоб /api/ai/start віддавав 200 OK
+/**
+ * 1. Ініціалізація сесії для фронтенду (усуває помилку 500 на /api/ai/start)
+ */
 export async function createOpenAIConversation() {
   return `thread_local_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 }
 
-export async function generateProductDetails(productName, category = "General") {
+/**
+ * 2. Чат-асистент із гібридною логікою Gemini -> Fallback на Ollama (з контекстом DynamoDB)
+ */
+export async function sendGeminiChatMessage(message) {
+  const fullPrompt = await buildStoreContextPrompt(message);
+
+  // Спроба #1: Google Gemini API з тайм-аутом
   try {
-    const prompt = `Згенеруй короткий опис та 5 тегів для товару "${productName}" у категорії "${category}". Відповідь надай строго у форматі JSON: {"description": "...", "tags": ["tag1", "tag2"]}`;
+    return await callWithTimeout(callGeminiAPI(fullPrompt), TIMEOUT_MS);
+  } catch (geminiError) {
+    console.warn(`[AI Hybrid Notice] Gemini недоступний (${geminiError.message}). Автопереключення на локальну Ollama...`);
     
-    const response = await fetch(OLLAMA_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "mistral",
-        prompt: prompt,
-        stream: false
-      })
-    });
-
-    if (!response.ok) throw new Error(`Ollama status ${response.status}`);
-
-    const data = await response.json();
-    let parsed;
+    // Спроба #2: Резервний виклик локальної Ollama
     try {
-      parsed = JSON.parse(data.response);
-    } catch {
-      parsed = { description: data.response, tags: ["cloudmart", category.toLowerCase()] };
+      return await callOllamaAPI(fullPrompt);
+    } catch (ollamaError) {
+      console.error("[AI Critical Error] Обидва AI-провайдери недоступні:", ollamaError.message);
+      return "Вибачте, сервіс штучного інтелекту тимчасово недоступний.";
     }
+  }
+}
 
-    return {
-      description: parsed.description || `Якісний товар ${productName}`,
-      tags: parsed.tags || ["cloudmart", "новинка"]
-    };
+/**
+ * 3. Генерація описів товарів для адмін-панелі (Gemini -> Fallback на Ollama)
+ */
+export async function generateProductDetails(productName, category = "General") {
+  const prompt = `Згенеруй короткий опис та 5 тегів для товару "${productName}" у категорії "${category}". Відповідь надай строго у форматі JSON з полями "description" та "tags" (масив рядків).`;
+
+  let rawResponse = "";
+  try {
+    rawResponse = await callWithTimeout(callGeminiAPI(prompt), TIMEOUT_MS);
   } catch (error) {
-    console.error("Ollama AI Error:", error.message);
+    console.warn(`[AI Hybrid Notice] Gemini fallback для генерації продукту: ${error.message}`);
+    try {
+      rawResponse = await callOllamaAPI(prompt);
+    } catch (ollamaErr) {
+      return {
+        description: `Якісний товар "${productName}" у категорії ${category}.`,
+        tags: ["cloudmart", "новинка"]
+      };
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(rawResponse);
     return {
-      description: `Товар "${productName}" у категорії ${category}. (Створено локально)`,
-      tags: ["cloudmart", "новинка", "акція"]
+      description: parsed.description || `Товар ${productName}`,
+      tags: parsed.tags || ["cloudmart", category.toLowerCase()]
+    };
+  } catch (parseError) {
+    return {
+      description: rawResponse,
+      tags: ["cloudmart", category.toLowerCase()]
     };
   }
 }
 
-export async function sendGeminiChatMessage(message) {
-  try {
-    const response = await fetch(OLLAMA_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "mistral",
-        prompt: message,
-        stream: false
-      })
-    });
+// ----------------------------------------------------------------------------
+// Допоміжні функції
+// ----------------------------------------------------------------------------
 
-    if (!response.ok) throw new Error(`Ollama status ${response.status}`);
+function callWithTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms);
+    promise
+      .then((res) => { clearTimeout(timer); resolve(res); })
+      .catch((err) => { clearTimeout(timer); reject(err); });
+  });
+}
 
-    const data = await response.json();
-    return data.response;
-  } catch (error) {
-    console.error("Ollama Chat Error:", error.message);
-    return "Запит оброблено в резервному режимі.";
+async function callGeminiAPI(prompt) {
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }]
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini HTTP ${response.status}: ${errText}`);
   }
+
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
+async function callOllamaAPI(prompt) {
+  const response = await fetch(OLLAMA_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "mistral",
+      prompt: prompt,
+      stream: false
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Ollama HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.response;
 }
