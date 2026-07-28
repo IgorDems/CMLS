@@ -4,7 +4,7 @@ kind: Kustomization
 #- ../../base/localstack
 resources:
 - ../../base/namespace
-- ../../base/ollama
+#- ../../base/ollama
 - ../../base/ai-stack
 - ../../base/agent-gateway
 - ../../base/monitoring
